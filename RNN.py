@@ -67,7 +67,9 @@ class RNN(nn.Module):
         return nn_str
 
     def build_net(self, string_layer):
+        print(string_layer)
         net = Net.Net(string_layer)
+        print(net.net)
 
 
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
@@ -99,4 +101,5 @@ class RNN(nn.Module):
 if __name__ == '__main__':
     rnn = RNN(1, HIDDEN_SIZE, 10)
     nn_str = rnn.generate_NNstring(4)
-    print(nn_str)
+    rnn.build_net(nn_str)
+    #print(nn_str)
