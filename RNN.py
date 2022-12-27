@@ -7,6 +7,8 @@ from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
 
+import Net
+
 # Possible outputs of RNN
 #OUTPUT_SIZE = 191
 F_HEIGHT = [1,3,5,7]
@@ -45,17 +47,28 @@ class RNN(nn.Module):
 
         return x,h
 
-    def return_NNstring(self):
+    def return_NNlayer(self):
         inputs = [torch.randn(1, 1) for _ in range(1)]
         x, h = self(inputs, (torch.FloatTensor(2, 1, 35).uniform_(-0.8, 0.8),
                             torch.FloatTensor(2, 1, 35).uniform_(-0.8, 0.8)))
-        print("x :", x.size())
-        print("h :", h[0].size(), h[1].size())
+        #print("x :", x.size())
+        #print("h :", h[0].size(), h[1].size())
 
         idx = torch.distributions.Categorical(logits=x).sample()
-        print(idx)
+        #print(idx)
 
         return self.type_layers[int(idx)]
+
+    def generate_NNstring(self, nb_layer):
+        nn_str = []
+        for _ in range(nb_layer):
+            nn_str.append(self.return_NNlayer())
+
+        return nn_str
+
+    def build_net(self, string_layer):
+        net = Net.Net(string_layer)
+
 
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
                      n_filter = N_FILTERS, n_strides = N_STRIDES):
@@ -85,5 +98,5 @@ class RNN(nn.Module):
 
 if __name__ == '__main__':
     rnn = RNN(1, HIDDEN_SIZE, 10)
-    print(rnn.return_NNstring())
-
+    nn_str = rnn.generate_NNstring(4)
+    print(nn_str)
