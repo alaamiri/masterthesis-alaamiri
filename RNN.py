@@ -22,12 +22,15 @@ N_LAYER = 2
 
 #torch.manual_seed(1)
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using {device} device")
+
 
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, train_size):
         super(RNN, self).__init__()
+
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Using {self.device} device")
+
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.type_layers = self._init_layers()
@@ -68,9 +71,53 @@ class RNN(nn.Module):
 
     def build_net(self, string_layer):
         print(string_layer)
-        net = Net.Net(string_layer)
-        print(net.net)
+        self.net = Net.Net(string_layer)
+        print(self.net)
 
+    def train_net(self, dataset = "MNIST"):
+        training_data = datasets.FashionMNIST(
+            root="data",
+            train=True,
+            download=True,
+            transform=ToTensor(),
+        )
+
+        batch_size = 64
+        train_dataloader = DataLoader(training_data, batch_size=batch_size)
+
+        size = len(train_dataloader.dataset)
+        self.net.train()
+        for batch, (X, y) in enumerate(train_dataloader):
+            X, y = X.to(self.device), y.to(self.device)
+
+            # Compute prediction error
+            pred = self.net(X)
+            loss = self.net.loss_fn(pred, y)
+
+            # Backpropagation
+            self.net.optimizer.zero_grad()
+            loss.backward()
+            self.net.optimizer.step()
+
+            if batch % 100 == 0:
+                loss, current = loss.item(), batch * len(X)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+    def test_net(self):
+        # Download test data from open datasets.
+        test_data = datasets.FashionMNIST(
+            root="data",
+            train=False,
+            download=True,
+            transform=ToTensor(),
+        )
+
+        batch_size = 64
+        test_dataloader = DataLoader(test_data, batch_size=batch_size)
+        for X, y in test_dataloader:
+            print(f"Shape of X [N, C, H, W]: {X.shape}")
+            print(f"Shape of y: {y.shape} {y.dtype}")
+            break
 
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
                      n_filter = N_FILTERS, n_strides = N_STRIDES):
@@ -102,4 +149,5 @@ if __name__ == '__main__':
     rnn = RNN(1, HIDDEN_SIZE, 10)
     nn_str = rnn.generate_NNstring(4)
     rnn.build_net(nn_str)
+    rnn.train_net()
     #print(nn_str)

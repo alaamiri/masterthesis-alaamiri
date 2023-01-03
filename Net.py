@@ -14,7 +14,11 @@ class Net(nn.Module):
 
         self.net = self._init_net()
 
-        self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3)
+
+    def __repr__(self):
+        return self.net.__repr__()
 
     def _init_net(self):
         layers = []
@@ -25,10 +29,14 @@ class Net(nn.Module):
                                     kernel_size=(layer[0], layer[1]),
                                     stride=layer[3]))
             prev_channel = layer[2]
-
             layers.append(nn.ReLU())
+
+        layers.append(nn.Linear(prev_channel, 10))
 
         return nn.Sequential(*layers)
 
-    def forward(self):
-        pass
+    def forward(self, x):
+        x = torch.flatten(x)
+        y = self.net(x)
+
+        return  y
