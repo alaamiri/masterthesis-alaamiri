@@ -83,12 +83,12 @@ class RNN(nn.Module):
         )
 
         batch_size = 64
-        train_dataloader = DataLoader(training_data, batch_size=batch_size)
+        train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True, num_workers=1)
 
         size = len(train_dataloader.dataset)
         self.net.train()
         for batch, (X, y) in enumerate(train_dataloader):
-            X, y = X.to(self.device), y.to(self.device)
+            #X, y = X.to(self.device), y.to(self.device)
 
             # Compute prediction error
             pred = self.net(X)
@@ -118,6 +118,20 @@ class RNN(nn.Module):
             print(f"Shape of X [N, C, H, W]: {X.shape}")
             print(f"Shape of y: {y.shape} {y.dtype}")
             break
+
+        size = len(test_dataloader.dataset)
+        num_batches = len(test_dataloader)
+        self.net.eval()
+        test_loss, correct = 0, 0
+        with torch.no_grad():
+            for X, y in test_dataloader:
+                #X, y = X.to(device), y.to(device)
+                pred = self.net(X)
+                test_loss += self.net.loss_fn(pred, y).item()
+                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+        test_loss /= num_batches
+        correct /= size
+        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
                      n_filter = N_FILTERS, n_strides = N_STRIDES):
@@ -150,4 +164,5 @@ if __name__ == '__main__':
     nn_str = rnn.generate_NNstring(4)
     rnn.build_net(nn_str)
     rnn.train_net()
+    rnn.test_net()
     #print(nn_str)
