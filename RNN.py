@@ -23,7 +23,8 @@ N_LAYER = 2
 #torch.manual_seed(1)
 
 
-
+"""
+"""
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, train_size):
         super(RNN, self).__init__()
@@ -92,6 +93,8 @@ class RNN(nn.Module):
 
             # Compute prediction error
             pred = self.net(X)
+            print(pred.size())
+            print(y.size())
             loss = self.net.loss_fn(pred, y)
 
             # Backpropagation
@@ -133,6 +136,36 @@ class RNN(nn.Module):
         correct /= size
         print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
+    def _get_dataloaders(self, batch_size=64, data_type="MNIST"):
+        train_data = datasets.FashionMNIST(
+            root="data",
+            train=True,
+            download=True,
+            transform=ToTensor(),
+        )
+
+        test_data = datasets.FashionMNIST(
+            root="data",
+            train=False,
+            download=True,
+            transform=ToTensor(),
+        )
+
+        loaders = {
+            'train': DataLoader(train_data,
+                                batch_size=batch_size),
+
+            'test': DataLoader(test_data,
+                               batch_size=batch_size),
+        }
+
+        return loaders
+
+    def validate_net(self):
+        loaders = self._get_dataloaders()
+        self.net.train_model(loaders['train'])
+        self.net.test_model(loaders['test'])
+
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
                      n_filter = N_FILTERS, n_strides = N_STRIDES):
         a = [f_height, f_width, n_filter, n_strides]
@@ -163,6 +196,7 @@ if __name__ == '__main__':
     rnn = RNN(1, HIDDEN_SIZE, 10)
     nn_str = rnn.generate_NNstring(4)
     rnn.build_net(nn_str)
-    rnn.train_net()
-    rnn.test_net()
+    #rnn.train_net()
+    #rnn.test_net()
+    rnn.validate_net()
     #print(nn_str)

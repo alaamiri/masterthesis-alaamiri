@@ -6,6 +6,7 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.autograd import Variable
 
 class Net(nn.Module):
     def __init__(self, string_layers):
@@ -43,3 +44,42 @@ class Net(nn.Module):
         out_y = self.out(y)
 
         return out_y
+
+    def train_model(self, dataloader):
+        size = len(dataloader.dataset)
+        self.net.train()
+        for batch, (X, y) in enumerate(dataloader):
+            # X, y = X.to(self.device), y.to(self.device)
+            # Compute prediction error
+            pred = self(X)
+            loss = self.loss_fn(pred, y)
+
+            # Backpropagation
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            if batch % 100 == 0:
+                loss, current = loss.item(), batch * len(X)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+    def test_model(self, dataloader):
+        for X, y in dataloader:
+            print(f"Shape of X [N, C, H, W]: {X.shape}")
+            print(f"Shape of y: {y.shape} {y.dtype}")
+            break
+
+        size = len(dataloader.dataset)
+        num_batches = len(dataloader)
+        self.eval()
+        test_loss, correct = 0, 0
+        with torch.no_grad():
+            for X, y in dataloader:
+                # X, y = X.to(device), y.to(device)
+                pred = self(X)
+                test_loss += self.loss_fn(pred, y).item()
+                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+        test_loss /= num_batches
+        correct /= size
+        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
