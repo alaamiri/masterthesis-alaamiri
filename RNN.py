@@ -14,7 +14,7 @@ import Net
 F_HEIGHT = [1,3,5,7]
 F_WIDTH = [1,3,5,7]
 N_FILTERS = [24,36,48,64]
-N_STRIDES = [1,2,3]
+N_STRIDES = [1]
 
 # LSTM parameters
 HIDDEN_SIZE = 35

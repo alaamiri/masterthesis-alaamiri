@@ -8,13 +8,16 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+import numpy as np
+
 class Net(nn.Module):
     def __init__(self, string_layers):
         super(Net, self).__init__()
+        self.expected_input_size = (1, 1, 28, 28)
         self.string_layers = string_layers
 
         self.net = self._init_net()
-
+        self.out = self._init_linear()
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3)
@@ -28,13 +31,23 @@ class Net(nn.Module):
         for layer in self.string_layers:
             layers.append(nn.Conv2d(in_channels=prev_channel,
                                     out_channels=layer[2],
-                                    kernel_size=(5, 5), #kernel_size=(layer[0], layer[1])
-                                    stride=1,    #stride=layer[3]
+                                    kernel_size=(layer[0], layer[1]), #kernel_size=(layer[0], layer[1])
+                                    stride=layer[3],    #stride=layer[3]
                                     padding=0))
             prev_channel = layer[2]
             layers.append(nn.ReLU())
-        self.out = nn.Linear(prev_channel * 12 * 12, 10)
         return nn.Sequential(*layers)
+
+    def _init_linear(self, output_features = 10):
+        conv_out = self._get_output_shape(self.net, self.expected_input_size)
+        # self.out = nn.Linear(prev_channel * 12 * 12, 10)
+        return nn.Linear(conv_out, out_features=output_features)
+
+    """
+    code from https://discuss.pytorch.org/t/linear-layer-input-neurons-number-calculation-after-conv2d/28659/3
+    """
+    def _get_output_shape(self,model, image_dim):
+        return np.prod(model(torch.rand(*(image_dim))).data.shape)
 
     def forward(self, x):
         y = self.net(x)
@@ -51,6 +64,7 @@ class Net(nn.Module):
         for batch, (X, y) in enumerate(dataloader):
             # X, y = X.to(self.device), y.to(self.device)
             # Compute prediction error
+            #print(X.size())
             pred = self(X)
             loss = self.loss_fn(pred, y)
 
@@ -82,4 +96,5 @@ class Net(nn.Module):
         test_loss /= num_batches
         correct /= size
         print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+        print("For model: \n", self)
 
