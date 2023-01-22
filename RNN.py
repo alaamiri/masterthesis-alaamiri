@@ -26,47 +26,47 @@ N_LAYER = 2
 """
 """
 class RNN(nn.Module):
-    def __init__(self, input_size, hidden_size, train_size):
+    def __init__(self, hidden_size):
         super(RNN, self).__init__()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using {self.device} device")
 
-        self.input_size = input_size
-        self.hidden_size = hidden_size
         self.type_layers = self._init_layers()
-        print("# of possible layers :", len(self.type_layers))
+
+        self.input_size = len(self.type_layers)
+        self.hidden_size = hidden_size
+        print("# of possible layers :", self.input_size)
         self.output_size = len(self.type_layers)
 
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=N_LAYER)
+        self.lstm = nn.LSTM(self.input_size, hidden_size, num_layers=N_LAYER)
         self.hidden_to_hyper = nn.Linear(hidden_size, self.output_size)
 
         self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
 
     def forward(self, x, h):
-        x = torch.cat(x).view(len(x), 1, -1)
+        x = torch.unsqueeze(x,0)
 
         x_lstm, h = self.lstm(x, h)
         x = self.hidden_to_hyper(x_lstm.view(len(x_lstm),-1))
 
         return x,h
 
-    def return_NNlayer(self):
-        inputs = [torch.randn(1, 1) for _ in range(1)]
-        x, h = self(inputs, (torch.FloatTensor(2, 1, 35).uniform_(-0.8, 0.8),
-                            torch.FloatTensor(2, 1, 35).uniform_(-0.8, 0.8)))
-        #print("x :", x.size())
-        #print("h :", h[0].size(), h[1].size())
+    def return_NNlayer(self, x, h):
+
+        x, h = self(x, h)
 
         idx = torch.distributions.Categorical(logits=x).sample()
-        #print(idx)
 
-        return self.type_layers[int(idx)]
+        return x, h, self.type_layers[int(idx)]
 
     def generate_NNstring(self, nb_layer):
         nn_str = []
+        x = torch.zeros(self.input_size).unsqueeze(dim=0) #lstm need dim 3 so we dim 2 then dim 3
+        h = self._init_hidden()
         for _ in range(nb_layer):
-            nn_str.append(self.return_NNlayer())
+            x, h, layer = self.return_NNlayer(x, h)
+            nn_str.append(layer)
 
         return nn_str
 
@@ -75,66 +75,6 @@ class RNN(nn.Module):
         self.net = Net.Net(string_layer)
         print(self.net)
 
-    def train_net(self, dataset = "MNIST"):
-        training_data = datasets.FashionMNIST(
-            root="data",
-            train=True,
-            download=True,
-            transform=ToTensor(),
-        )
-
-        batch_size = 64
-        train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True, num_workers=1)
-
-        size = len(train_dataloader.dataset)
-        self.net.train()
-        for batch, (X, y) in enumerate(train_dataloader):
-            #X, y = X.to(self.device), y.to(self.device)
-
-            # Compute prediction error
-            pred = self.net(X)
-            print(pred.size())
-            print(y.size())
-            loss = self.net.loss_fn(pred, y)
-
-            # Backpropagation
-            self.net.optimizer.zero_grad()
-            loss.backward()
-            self.net.optimizer.step()
-
-            if batch % 100 == 0:
-                loss, current = loss.item(), batch * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-    def test_net(self):
-        # Download test data from open datasets.
-        test_data = datasets.FashionMNIST(
-            root="data",
-            train=False,
-            download=True,
-            transform=ToTensor(),
-        )
-
-        batch_size = 64
-        test_dataloader = DataLoader(test_data, batch_size=batch_size)
-        for X, y in test_dataloader:
-            print(f"Shape of X [N, C, H, W]: {X.shape}")
-            print(f"Shape of y: {y.shape} {y.dtype}")
-            break
-
-        size = len(test_dataloader.dataset)
-        num_batches = len(test_dataloader)
-        self.net.eval()
-        test_loss, correct = 0, 0
-        with torch.no_grad():
-            for X, y in test_dataloader:
-                #X, y = X.to(device), y.to(device)
-                pred = self.net(X)
-                test_loss += self.net.loss_fn(pred, y).item()
-                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-        test_loss /= num_batches
-        correct /= size
-        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
     def _get_dataloaders(self, batch_size=64, data_type="MNIST"):
         train_data = datasets.FashionMNIST(
@@ -193,7 +133,7 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
-    rnn = RNN(1, HIDDEN_SIZE, 10)
+    rnn = RNN(HIDDEN_SIZE)
     nn_str = rnn.generate_NNstring(4)
     rnn.build_net(nn_str)
     #rnn.train_net()
