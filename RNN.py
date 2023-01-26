@@ -1,4 +1,6 @@
 import itertools
+
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -9,8 +11,7 @@ import torch.optim as optim
 
 import Net
 
-# Possible outputs of RNN
-#OUTPUT_SIZE = 191
+# The RNN will output a layers depending the combination of those hyperparameter
 F_HEIGHT = [1,3,5,7]
 F_WIDTH = [1,3,5,7]
 N_FILTERS = [24,36,48,64]
@@ -22,10 +23,10 @@ N_LAYER = 2
 
 #torch.manual_seed(1)
 
-
-"""
-"""
 class RNN(nn.Module):
+    """
+    A class representing the controller which generate the CNN depending of the search space
+    """
     def __init__(self, hidden_size):
         super(RNN, self).__init__()
 
@@ -53,28 +54,95 @@ class RNN(nn.Module):
         return x,h
 
     def return_NNlayer(self, x, h):
+        """
+        Return a layer depending of the distribution given by the RNN's output
 
+        :param x: tensor
+            The output given by the RNN
+        :param h: tensor
+            The hidden state of the Rnn
+        :return:
+            The output and hidden state at t+1 with the selected layer
+        """
         x, h = self(x, h)
 
         idx = torch.distributions.Categorical(logits=x).sample()
+        prob = F.softmax(x, dim=-1).squeeze(dim=0)
 
-        return x, h, self.type_layers[int(idx)]
+
+        return x, h, self.type_layers[int(idx)], prob[int(idx)]
 
     def generate_NNstring(self, nb_layer):
+        """
+        Generate a string coresponding to an architecture to build
+        :param nb_layer: int
+            Number of layers needed to generate the architecture
+        :return:
+            A string in a form of list designating the architecture to generate
+        """
         nn_str = []
+        prob_list = []
+        # Initializing the tensor for the RNN
         x = torch.zeros(self.input_size).unsqueeze(dim=0) #lstm need dim 3 so we dim 2 then dim 3
         h = self._init_hidden()
         for _ in range(nb_layer):
-            x, h, layer = self.return_NNlayer(x, h)
+            x, h, layer, prob = self.return_NNlayer(x, h)
             nn_str.append(layer)
+            prob_list.append(prob)
 
-        return nn_str
+        return nn_str, prob_list
 
     def build_net(self, string_layer):
-        print(string_layer)
-        self.net = Net.Net(string_layer)
-        print(self.net)
+        """
 
+        :param string_layer:
+        :return:
+        """
+        print(string_layer)
+        net = Net.Net(string_layer)
+        print(net)
+
+        return net
+
+
+    def validate_net(self, model):
+        """
+        Method which will train and validate the network
+
+        :param model: Net.Net
+            The model to train and validate
+        :return:
+            The accuracy of the validation
+        """
+        loaders = self._get_dataloaders()
+        model.train_model(loaders['train'])
+        accuracy = model.test_model(loaders['test'])
+
+        return accuracy
+
+    def reinforce(self, prob, reward):
+        # Keep in memory every network its action
+        # Build a tensor on the prob of those actions
+        # Build the network, train it and return its accuracy of testing step
+        # Compute the log of this prob and multiply it with the reward
+        # do the gradient ascent
+        log_prob = np.log(prob)
+        loss = np.sum(log_prob * reward)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+
+
+
+
+
+    def run(self, nb_layer=2):
+        nn_str, prob_list = rnn.generate_NNstring(nb_layer)
+        model = rnn.build_net(nn_str)
+        r = rnn.validate_net(model)
+        self.reinforce(prob_list, r)
 
     def _get_dataloaders(self, batch_size=64, data_type="MNIST"):
         train_data = datasets.FashionMNIST(
@@ -101,10 +169,6 @@ class RNN(nn.Module):
 
         return loaders
 
-    def validate_net(self):
-        loaders = self._get_dataloaders()
-        self.net.train_model(loaders['train'])
-        self.net.test_model(loaders['test'])
 
     def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
                      n_filter = N_FILTERS, n_strides = N_STRIDES):
@@ -119,24 +183,8 @@ class RNN(nn.Module):
         return (torch.FloatTensor(2, 1, self.hidden_size).uniform_(r1, r2),
                 torch.FloatTensor(2, 1, self.hidden_size).uniform_(r1, r2))
 
-    def test_LSTM(self):
-        inputs = [torch.randn(1, 1) for _ in range(100)]
-        #print(inputs)
-        inputs = torch.cat(inputs).view(len(inputs), 1, -1)
-        #print(inputs)
-        hidden = self._init_hidden()  # clean out hidden state
-        out, hidden = self.lstm(inputs, hidden)
-        #print(out)
-        out_space = self.hidden_to_hyper(out.view(len(inputs),-1))
-        out_scores = F.softmax(out_space,dim=1)
-        #print(out_scores)
-
 
 if __name__ == '__main__':
     rnn = RNN(HIDDEN_SIZE)
-    nn_str = rnn.generate_NNstring(4)
-    rnn.build_net(nn_str)
-    #rnn.train_net()
-    #rnn.test_net()
-    rnn.validate_net()
+    rnn.run()
     #print(nn_str)
