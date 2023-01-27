@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+import torch.utils.data as data_utils
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 import torch.nn.functional as F
@@ -88,7 +89,7 @@ class RNN(nn.Module):
         for _ in range(nb_layer):
             x, h, layer, prob = self.return_NNlayer(x, h)
             nn_str.append(layer)
-            prob_list.append(prob)
+            prob_list.append(prob.detach()) #to remove the grad_fn field
 
         return nn_str, prob_list
 
@@ -126,16 +127,15 @@ class RNN(nn.Module):
         # Build the network, train it and return its accuracy of testing step
         # Compute the log of this prob and multiply it with the reward
         # do the gradient ascent
+        print(prob)
         log_prob = np.log(prob)
-        loss = np.sum(log_prob * reward)
+        print(prob)
+        loss = torch.tensor(np.sum(log_prob * reward),requires_grad=True)
+        print(loss)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-
-
-
 
 
     def run(self, nb_layer=2):
@@ -158,6 +158,9 @@ class RNN(nn.Module):
             download=True,
             transform=ToTensor(),
         )
+
+        indices = torch.arange(10000)
+        train_data = data_utils.Subset(train_data, indices)
 
         loaders = {
             'train': DataLoader(train_data,
