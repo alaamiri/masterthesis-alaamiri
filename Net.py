@@ -59,6 +59,7 @@ class Net(nn.Module):
         return out_y
 
     def train_model(self, dataloader):
+        print("  Training model...")
         size = len(dataloader.dataset)
         self.net.train()
         for batch, (X, y) in enumerate(dataloader):
@@ -75,14 +76,9 @@ class Net(nn.Module):
 
             if batch % 100 == 0:
                 loss, current = loss.item(), batch * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"\tloss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
     def test_model(self, dataloader):
-        for X, y in dataloader:
-            print(f"Shape of X [N, C, H, W]: {X.shape}")
-            print(f"Shape of y: {y.shape} {y.dtype}")
-            break
-
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
         self.eval()
@@ -95,8 +91,7 @@ class Net(nn.Module):
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
         test_loss /= num_batches
         correct /= size
-        print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-        print("For model: \n", self)
+        print(f"\tTest Error: \n \t\tAccuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
         return correct
 

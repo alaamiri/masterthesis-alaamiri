@@ -99,9 +99,7 @@ class RNN(nn.Module):
         :param string_layer:
         :return:
         """
-        print(string_layer)
         net = Net.Net(string_layer)
-        print(net)
 
         return net
 
@@ -127,22 +125,37 @@ class RNN(nn.Module):
         # Build the network, train it and return its accuracy of testing step
         # Compute the log of this prob and multiply it with the reward
         # do the gradient ascent
-        print(prob)
         log_prob = np.log(prob)
-        print(prob)
-        loss = torch.tensor(np.sum(log_prob * reward),requires_grad=True)
-        print(loss)
+
+        self.loss = torch.tensor(np.sum(log_prob * reward),requires_grad=True) / len(log_prob)
 
         self.optimizer.zero_grad()
-        loss.backward()
+        self.loss.backward()
         self.optimizer.step()
 
 
-    def run(self, nb_layer=2):
+    def iter(self, nb_layer=2):
         nn_str, prob_list = rnn.generate_NNstring(nb_layer)
         model = rnn.build_net(nn_str)
         r = rnn.validate_net(model)
         self.reinforce(prob_list, r)
+
+        return model, r
+
+    def run(self, iteration):
+        self.loss = 0
+        best_model = None
+        best_r = 0
+        for i in range(iteration):
+            model, r = self.iter(2)
+            if r > best_r:
+                best_r = r
+                best_model = model
+            print(f"RNN loss: {self.loss:>7f}  [{i:>3d}/{iteration:>3d}]")
+
+        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}","----------")
+        print("Best model :", best_model)
+        print("With Accurary of", f"{best_r*100:>0.1f}%")
 
     def _get_dataloaders(self, batch_size=64, data_type="MNIST"):
         train_data = datasets.FashionMNIST(
@@ -189,5 +202,5 @@ class RNN(nn.Module):
 
 if __name__ == '__main__':
     rnn = RNN(HIDDEN_SIZE)
-    rnn.run()
+    rnn.run(10)
     #print(nn_str)
