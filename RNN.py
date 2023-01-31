@@ -44,6 +44,9 @@ class RNN(nn.Module):
         self.lstm = nn.LSTM(self.input_size, hidden_size, num_layers=N_LAYER)
         self.hidden_to_hyper = nn.Linear(hidden_size, self.output_size)
 
+        self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
+        self.h = self._init_hidden()
+
         self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
 
     def forward(self, x, h):
@@ -83,11 +86,9 @@ class RNN(nn.Module):
         """
         nn_str = []
         prob_list = []
-        # Initializing the tensor for the RNN
-        x = torch.zeros(self.input_size).unsqueeze(dim=0) #lstm need dim 3 so we dim 2 then dim 3
-        h = self._init_hidden()
+
         for _ in range(nb_layer):
-            x, h, layer, prob = self.return_NNlayer(x, h)
+            self.x, self.h, layer, prob = self.return_NNlayer(self.x, self.h)
             nn_str.append(layer)
             prob_list.append(prob.detach()) #to remove the grad_fn field
 
@@ -127,7 +128,7 @@ class RNN(nn.Module):
         # do the gradient ascent
         log_prob = np.log(prob)
 
-        self.loss = torch.tensor(np.sum(log_prob * reward),requires_grad=True) / len(log_prob)
+        self.loss = -torch.tensor(np.sum(log_prob * reward),requires_grad=True) / len(log_prob)
 
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -146,15 +147,18 @@ class RNN(nn.Module):
         self.loss = 0
         best_model = None
         best_r = 0
+        best_iter = 0
         for i in range(iteration):
-            model, r = self.iter(2)
+            model, r = self.iter(3)
             if r > best_r:
                 best_r = r
                 best_model = model
-            print(f"RNN loss: {self.loss:>7f}  [{i:>3d}/{iteration:>3d}]")
+                best_iter = i
+            print(f"RNN loss: {self.loss:>7f}  [{i+1:>3d}/{iteration:>3d}]")
+            print("=========================================================")
 
         print("\nEnd of iteration loss =", f"{self.loss.item():>7f}","----------")
-        print("Best model :", best_model)
+        print("Best model at iteration",best_iter,":", best_model)
         print("With Accurary of", f"{best_r*100:>0.1f}%")
 
     def _get_dataloaders(self, batch_size=64, data_type="MNIST"):
@@ -202,5 +206,5 @@ class RNN(nn.Module):
 
 if __name__ == '__main__':
     rnn = RNN(HIDDEN_SIZE)
-    rnn.run(10)
+    rnn.run(20)
     #print(nn_str)
