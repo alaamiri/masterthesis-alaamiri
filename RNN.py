@@ -1,6 +1,9 @@
 import itertools
 
 import numpy as np
+
+from Plot import *
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -28,7 +31,7 @@ class RNN(nn.Module):
     """
     A class representing the controller which generate the CNN depending of the search space
     """
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size: int):
         super(RNN, self).__init__()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -57,7 +60,7 @@ class RNN(nn.Module):
 
         return x,h
 
-    def return_NNlayer(self, x, h):
+    def return_NNlayer(self, x: torch.Tensor, h: torch.Tensor) -> tuple:
         """
         Return a layer depending of the distribution given by the RNN's output
 
@@ -66,7 +69,7 @@ class RNN(nn.Module):
         :param h: tensor
             The hidden state of the Rnn
         :return:
-            The output and hidden state at t+1 with the selected layer
+            The output and hidden state at t+1 with the selected layer and its probability
         """
         x, h = self(x, h)
 
@@ -76,13 +79,14 @@ class RNN(nn.Module):
 
         return x, h, self.type_layers[int(idx)], prob[int(idx)]
 
-    def generate_NNstring(self, nb_layer):
+    def generate_NNstring(self, nb_layer: int) -> tuple:
         """
         Generate a string coresponding to an architecture to build
         :param nb_layer: int
             Number of layers needed to generate the architecture
         :return:
-            A string in a form of list designating the architecture to generate
+            A string in a form of list designating the architecture's layers to generate, with a list of its associated
+            probabilities
         """
         nn_str = []
         prob_list = []
@@ -94,7 +98,7 @@ class RNN(nn.Module):
 
         return nn_str, prob_list
 
-    def build_net(self, string_layer):
+    def build_net(self, string_layer: list) -> Net.Net:
         """
 
         :param string_layer:
@@ -105,7 +109,7 @@ class RNN(nn.Module):
         return net
 
 
-    def validate_net(self, model):
+    def validate_net(self, model: Net.Net) -> float:
         """
         Method which will train and validate the network
 
@@ -120,7 +124,7 @@ class RNN(nn.Module):
 
         return accuracy
 
-    def reinforce(self, prob, reward):
+    def reinforce(self, prob: list, reward: float) -> None:
         # Keep in memory every network its action
         # Build a tensor on the prob of those actions
         # Build the network, train it and return its accuracy of testing step
@@ -128,14 +132,17 @@ class RNN(nn.Module):
         # do the gradient ascent
         log_prob = np.log(prob)
 
-        self.loss = -torch.tensor(np.sum(log_prob * reward),requires_grad=True) / len(log_prob)
+        self.acc_list.append(reward)
+        self.loss = -torch.tensor(np.sum(log_prob * reward) - np.average(self.acc_list),requires_grad=True) \
+                    / len(log_prob)
+        self.loss_list.append(self.loss.detach())
 
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
 
 
-    def iter(self, nb_layer=2):
+    def iter(self, nb_layer: int =2) -> tuple:
         nn_str, prob_list = rnn.generate_NNstring(nb_layer)
         model = rnn.build_net(nn_str)
         r = rnn.validate_net(model)
@@ -143,8 +150,10 @@ class RNN(nn.Module):
 
         return model, r
 
-    def run(self, iteration):
+    def run(self, iteration: int) -> None:
         self.loss = 0
+        self.loss_list = []
+        self.acc_list = []
         best_model = None
         best_r = 0
         best_iter = 0
@@ -207,4 +216,6 @@ class RNN(nn.Module):
 if __name__ == '__main__':
     rnn = RNN(HIDDEN_SIZE)
     rnn.run(20)
+    accuracy_plot(rnn.acc_list)
+    loss_plot(rnn.loss_list)
     #print(nn_str)
