@@ -17,8 +17,8 @@ import torch.optim as optim
 import Net
 
 # The RNN will output a layers depending the combination of those hyperparameter
-F_HEIGHT = [1,3,5,7]
-F_WIDTH = [1,3,5,7]
+F_HEIGHT = [3]
+F_WIDTH = [3]
 N_FILTERS = [24,36,48,64]
 N_STRIDES = [1]
 
@@ -147,7 +147,7 @@ class RNN(nn.Module):
         #            / len(log_prob)
         #G = torch.ones(1) * reward
 
-        self.loss = torch.sum(-torch.log(prob) * reward).requires_grad_() / len(prob)
+        self.loss = torch.sum(-torch.log(prob) * reward).requires_grad_() / len(prob) #tester - et + log
         self.loss_list.append(self.loss.item())
 
         self.optimizer.zero_grad()
@@ -155,7 +155,7 @@ class RNN(nn.Module):
         self.optimizer.step()
 
 
-    def iter(self, nb_layer: int =2) -> tuple:
+    def iter(self, nb_layer: int) -> tuple:
         """
         Simulate one iteration, which is a generation of a net with a given numbre of layers,
         its training and validation and the learning of the controller
@@ -172,15 +172,18 @@ class RNN(nn.Module):
 
         return model, r
 
-    def run(self, iteration: int) -> None:
+    def run(self, iteration: int, nb_layers: int) -> None:
         """
         Main method which will for a given number of iteration generated several net and reinforce the controller
         depending of the accuracy of the nets
 
-        :param iteration:
+        :param iteration: int
             Number of iteration i.e number of net to generate
+        :param nb_layers: int
+            Number of layers per net
         :return: None
         """
+        print(f'Generating {iteration} CNN of {nb_layers} layers...')
         self.loss = 0
         self.loss_list = []
         self.acc_list = []
@@ -188,7 +191,7 @@ class RNN(nn.Module):
         best_r = 0
         best_iter = 0
         for i in range(iteration):
-            model, r = self.iter(3)
+            model, r = self.iter(nb_layers)
             if r > best_r:
                 best_r = r
                 best_model = model
@@ -200,7 +203,7 @@ class RNN(nn.Module):
         print("Best model at iteration",best_iter,":", best_model)
         print("With Accurary of", f"{best_r*100:>0.1f}%")
 
-    def _get_dataloaders(self, batch_size : int=64, data_type : string="MNIST") -> dict:
+    def _get_dataloaders(self, batch_size : int=64, data_type : str="MNIST") -> dict:
         """
         Generate the dataloaders used by the generated nets to train and to validate
 
@@ -212,6 +215,7 @@ class RNN(nn.Module):
             Return the loaders in a dict with keys 'train' and 'test'
 
         """
+        #45 000
         train_data = datasets.FashionMNIST(
             root="data",
             train=True,
@@ -219,6 +223,7 @@ class RNN(nn.Module):
             transform=ToTensor(),
         )
 
+        #5000
         test_data = datasets.FashionMNIST(
             root="data",
             train=False,
@@ -226,8 +231,11 @@ class RNN(nn.Module):
             transform=ToTensor(),
         )
 
-        indices = torch.arange(10000)
-        train_data = data_utils.Subset(train_data, indices)
+        indices_train = torch.arange(45000)
+        indices_test = torch.arange(5000)
+
+        train_data = data_utils.Subset(train_data, indices_train)
+        test_data = data_utils.Subset(test_data, indices_test)
 
         loaders = {
             'train': DataLoader(train_data,
@@ -278,8 +286,10 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
+    nb_net = 50
+    nb_layers = 4
     rnn = RNN(HIDDEN_SIZE)
-    rnn.run(5)
-    accuracy_plot(rnn.acc_list)
-    loss_plot(rnn.loss_list)
+    rnn.run(nb_net,nb_layers)
+    accuracy_plot(rnn.acc_list, nb_net, nb_layers)
+    loss_plot(rnn.loss_list, nb_net, nb_layers)
     #print(nn_str)

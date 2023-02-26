@@ -20,10 +20,10 @@ class Net(nn.Module):
         self.out = self._init_linear()
 
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
 
     def __repr__(self):
-        return self.net.__repr__()
+        return f"{self.net.__repr__()}\n{self.out.__repr__()}"
 
     def _init_net(self):
         layers = []
@@ -35,7 +35,10 @@ class Net(nn.Module):
                                     stride=layer[3],    #stride=layer[3]
                                     padding=0))
             prev_channel = layer[2]
-            layers.append(nn.ReLU())
+            layers.append(nn.BatchNorm2d(layer[2]))
+            layers.append(nn.ReLU(inplace=True))
+        layers.pop(-1)
+        #layers.append(nn.AdaptiveAvgPool2d((1, 1)))
         return nn.Sequential(*layers)
 
     def _init_linear(self, output_features = 10):
@@ -52,7 +55,7 @@ class Net(nn.Module):
     def forward(self, x):
         y = self.net(x)
         #print(y.size())
-        y = y.view(y.size(0),-1)
+        y = y.view(y.size(0),-1) #flatten
         #print(y.size())
         out_y = self.out(y)
 
