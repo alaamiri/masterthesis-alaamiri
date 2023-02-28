@@ -17,16 +17,16 @@ import torch.optim as optim
 import Net
 
 # The RNN will output a layers depending the combination of those hyperparameter
-F_HEIGHT = [3]
-F_WIDTH = [3]
+F_HEIGHT = [1,3,5]
+F_WIDTH = [1,3,5]
 N_FILTERS = [24,36,48,64]
 N_STRIDES = [1]
 
 # LSTM parameters
 HIDDEN_SIZE = 35
 N_LAYER = 2
-
-#torch.manual_seed(1)
+seed = 1
+torch.manual_seed(seed)
 
 class RNN(nn.Module):
     """
@@ -216,7 +216,7 @@ class RNN(nn.Module):
 
         """
         #45 000
-        train_data = datasets.FashionMNIST(
+        train_data = datasets.MNIST(
             root="data",
             train=True,
             download=True,
@@ -224,7 +224,7 @@ class RNN(nn.Module):
         )
 
         #5000
-        test_data = datasets.FashionMNIST(
+        test_data = datasets.MNIST(
             root="data",
             train=False,
             download=True,
@@ -239,10 +239,12 @@ class RNN(nn.Module):
 
         loaders = {
             'train': DataLoader(train_data,
-                                batch_size=batch_size),
+                                batch_size=batch_size,
+                                shuffle=True),
 
             'test': DataLoader(test_data,
-                               batch_size=batch_size),
+                               batch_size=batch_size,
+                               shuffle=True)
         }
 
         return loaders
@@ -290,6 +292,6 @@ if __name__ == '__main__':
     nb_layers = 4
     rnn = RNN(HIDDEN_SIZE)
     rnn.run(nb_net,nb_layers)
-    accuracy_plot(rnn.acc_list, nb_net, nb_layers)
-    loss_plot(rnn.loss_list, nb_net, nb_layers)
+    accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
+    loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
     #print(nn_str)

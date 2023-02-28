@@ -21,6 +21,8 @@ class Net(nn.Module):
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
+        #self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-1, momentum=0.9,
+         #                                 weight_decay=1e-4, nesterov=True)
 
     def __repr__(self):
         return f"{self.net.__repr__()}\n{self.out.__repr__()}"
