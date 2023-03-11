@@ -17,16 +17,19 @@ import torch.optim as optim
 import Net
 
 # The RNN will output a layers depending the combination of those hyperparameter
-F_HEIGHT = [1,3,5]
-F_WIDTH = [1,3,5]
+F_HEIGHT = [3]
+F_WIDTH = [3]
 N_FILTERS = [24,36,48,64]
 N_STRIDES = [1]
 
 # LSTM parameters
 HIDDEN_SIZE = 35
 N_LAYER = 2
-seed = 1
-torch.manual_seed(seed)
+
+EPOCHS = 5
+
+seed = None
+#torch.manual_seed(seed)
 
 class RNN(nn.Module):
     """
@@ -110,7 +113,7 @@ class RNN(nn.Module):
         return net
 
 
-    def validate_net(self, model: Net.Net) -> float:
+    def validate_net(self, model: Net.Net, epochs: int=EPOCHS) -> float:
         """
         Method which will train and validate the network
 
@@ -120,10 +123,21 @@ class RNN(nn.Module):
             The accuracy of the validation
         """
         loaders = self._get_dataloaders()
-        model.train_model(loaders['train'])
-        accuracy = model.test_model(loaders['test'])
+        #model.train_model(loaders['train'])
+
+        print(f"Starting training model: ==========================================\n {model} ")
+        print("==================================================================")
+        for epoch in range(epochs):
+            model.train(True)
+            print(f"Training epoch {epoch}...")
+            avg_loss = model.train_one_epoch(loaders['train'])
+            model.train(False)
+
+            accuracy = model.test_model(loaders['test'])
 
         return accuracy
+
+
 
     def reinforce(self, prob: list, reward: float) -> None:
         """
@@ -172,6 +186,7 @@ class RNN(nn.Module):
 
         return model, r
 
+
     def run(self, iteration: int, nb_layers: int) -> None:
         """
         Main method which will for a given number of iteration generated several net and reinforce the controller
@@ -216,7 +231,7 @@ class RNN(nn.Module):
 
         """
         #45 000
-        train_data = datasets.MNIST(
+        train_data = datasets.FashionMNIST(
             root="data",
             train=True,
             download=True,
@@ -224,7 +239,7 @@ class RNN(nn.Module):
         )
 
         #5000
-        test_data = datasets.MNIST(
+        test_data = datasets.FashionMNIST(
             root="data",
             train=False,
             download=True,
@@ -268,6 +283,7 @@ class RNN(nn.Module):
             combination
         """
         a = [f_height, f_width, n_filter, n_strides]
+
         a = list(itertools.product(*a))
         dict = {}
         for i in range(len(a)):
@@ -288,8 +304,8 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
-    nb_net = 50
-    nb_layers = 4
+    nb_net = 5
+    nb_layers = 7
     rnn = RNN(HIDDEN_SIZE)
     rnn.run(nb_net,nb_layers)
     accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)

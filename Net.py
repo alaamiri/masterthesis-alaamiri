@@ -3,12 +3,15 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
+from torch import autograd
 from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
 import numpy as np
+
+EPOCHS = 5
 
 class Net(nn.Module):
     def __init__(self, string_layers):
@@ -20,9 +23,14 @@ class Net(nn.Module):
         self.out = self._init_linear()
 
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
-        #self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-1, momentum=0.9,
-         #                                 weight_decay=1e-4, nesterov=True)
+        #self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=5e-2, momentum=0.9,
+                                          weight_decay=1e-4, nesterov=True)
+
+        for name, module in self.named_modules():
+            if 'ReLU' in str(type(module)):
+                print(str(type(module)))
+
 
     def __repr__(self):
         return f"{self.net.__repr__()}\n{self.out.__repr__()}"
@@ -40,7 +48,7 @@ class Net(nn.Module):
             layers.append(nn.BatchNorm2d(layer[2]))
             layers.append(nn.ReLU(inplace=True))
         layers.pop(-1)
-        #layers.append(nn.AdaptiveAvgPool2d((1, 1)))
+        #layers.append(nn.AdaptiveAvgPool2d((3, 1)))
         return nn.Sequential(*layers)
 
     def _init_linear(self, output_features = 10):
@@ -63,10 +71,10 @@ class Net(nn.Module):
 
         return out_y
 
-    def train_model(self, dataloader):
-        print("  Training model...")
+    def train_one_epoch(self, dataloader, writer=None):
         size = len(dataloader.dataset)
-        self.net.train()
+
+        avg_loss = 0
         for batch, (X, y) in enumerate(dataloader):
             # X, y = X.to(self.device), y.to(self.device)
             # Compute prediction error
@@ -75,6 +83,7 @@ class Net(nn.Module):
             loss = self.loss_fn(pred, y)
 
             # Backpropagation
+
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -82,6 +91,9 @@ class Net(nn.Module):
             if batch % 100 == 0:
                 loss, current = loss.item(), batch * len(X)
                 print(f"\tloss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+        return avg_loss
+
 
     def test_model(self, dataloader):
         size = len(dataloader.dataset)
