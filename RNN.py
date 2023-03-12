@@ -15,6 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import Net
+from predictors import naswot
 
 # The RNN will output a layers depending the combination of those hyperparameter
 F_HEIGHT = [3]
@@ -28,8 +29,20 @@ N_LAYER = 2
 
 EPOCHS = 5
 
-seed = None
-#torch.manual_seed(seed)
+seed = 1
+torch.manual_seed(seed)
+
+# 1097.6585461702298
+# Accuracy: 78.0%, Avg loss: 0.649093
+"""
+[[82768608. 57117771. 56746112. ... 57496766. 56501693. 56924064.]
+ [57117771. 82768608. 56708583. ... 56745599. 56432870. 56861305.]
+ [56746112. 56708583. 82768608. ... 56614470. 56420361. 56639482.]
+ ...
+ [57496766. 56745599. 56614470. ... 82768608. 56553243. 57011024.]
+ [56501693. 56432870. 56420361. ... 56553243. 82768608. 57076075.]
+ [56924064. 56861305. 56639482. ... 57011024. 57076075. 82768608.]]
+"""
 
 class RNN(nn.Module):
     """
@@ -53,6 +66,8 @@ class RNN(nn.Module):
 
         self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
         self.h = self._init_hidden()
+
+        self.loaders = self._get_dataloaders()
 
         self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
 
@@ -122,7 +137,6 @@ class RNN(nn.Module):
         :return:
             The accuracy of the validation
         """
-        loaders = self._get_dataloaders()
         #model.train_model(loaders['train'])
 
         print(f"Starting training model: ==========================================\n {model} ")
@@ -130,10 +144,10 @@ class RNN(nn.Module):
         for epoch in range(epochs):
             model.train(True)
             print(f"Training epoch {epoch}...")
-            avg_loss = model.train_one_epoch(loaders['train'])
+            avg_loss = model.train_one_epoch(self.loaders['train'])
             model.train(False)
 
-            accuracy = model.test_model(loaders['test'])
+            accuracy = model.test_model(self.loaders['test'])
 
         return accuracy
 
@@ -186,6 +200,14 @@ class RNN(nn.Module):
 
         return model, r
 
+    def iter_predictor(self, nb_layer):
+        nn_str, prob_list = rnn.generate_NNstring(nb_layer)
+        model = rnn.build_net(nn_str)
+        predictor = naswot.NASWOT(self.loaders['train'], 64)
+        r = predictor.predict(model,5)
+        self.reinforce(prob_list, r)
+
+        return model, r
 
     def run(self, iteration: int, nb_layers: int) -> None:
         """
@@ -217,6 +239,32 @@ class RNN(nn.Module):
         print("\nEnd of iteration loss =", f"{self.loss.item():>7f}","----------")
         print("Best model at iteration",best_iter,":", best_model)
         print("With Accurary of", f"{best_r*100:>0.1f}%")
+
+    def run_predictor(self, iteration, nb_layers):
+        print(f'Generating {iteration} CNN of {nb_layers} layers...')
+        self.loss = 0
+        self.loss_list = []
+        self.acc_list = []
+        best_model = None
+        best_r = 0
+        best_iter = 0
+        for i in range(iteration):
+            model, r = self.iter_predictor(nb_layers)
+            if r > best_r:
+                best_r = r
+                best_model = model
+                best_iter = i
+
+            if i % 100 == 0:
+                print(f"\t[{i:>5d}/{iteration:>5d}]")
+
+        r = rnn.validate_net(best_model)
+        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}", "----------")
+        print("Best model at iteration", best_iter, ":", best_model)
+        print("With Accurary of", f"{r * 100:>0.1f}%")
+
+
+
 
     def _get_dataloaders(self, batch_size : int=64, data_type : str="MNIST") -> dict:
         """
@@ -304,10 +352,10 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
-    nb_net = 5
+    nb_net = 1000
     nb_layers = 7
     rnn = RNN(HIDDEN_SIZE)
     rnn.run(nb_net,nb_layers)
-    accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
-    loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
-    #print(nn_str)
+    #accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
+    #loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
+
