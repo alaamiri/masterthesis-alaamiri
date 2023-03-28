@@ -12,8 +12,6 @@ class NASWOT:
 
         def counting_forward_hook(module, inp, out):
             try:
-                if not module.visited_backwards:
-                    return
                 if isinstance(inp, tuple):
                     inp = inp[0]
                 inp = inp.view(inp.size(0), -1)
@@ -33,7 +31,7 @@ class NASWOT:
                 module.register_forward_hook(counting_forward_hook)
                 module.register_backward_hook(counting_backward_hook)
 
-    def predict(self, model, iter):
+    def predict(self, model, iter=1):
         i = 0
         self.init_hook(model)
         for batch, (X, y) in enumerate(self.data_loader):

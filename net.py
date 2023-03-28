@@ -27,37 +27,6 @@ class Net(nn.Module):
         self.optimizer = torch.optim.SGD(self.parameters(), lr=5e-2, momentum=0.9,
                                           weight_decay=1e-4, nesterov=True)
 
-        # NASWOT
-        self.K = np.zeros((64, 64))
-
-
-        for name, module in self.named_modules():
-            if 'ReLU' in str(type(module)):
-                # hooks[name] = module.register_forward_hook(counting_hook)
-                module.register_forward_hook(self.counting_forward_hook)
-                module.register_backward_hook(self.counting_backward_hook)
-
-
-    def counting_forward_hook(self, module, inp, out):
-        try:
-            if isinstance(inp, tuple):
-                inp = inp[0]
-            inp = inp.view(inp.size(0), -1)
-            x = (inp > 0).float()
-            K = x @ x.t()
-            K2 = (1. - x) @ (1. - x.t())
-            self.K = self.K + K.cpu().numpy() + K2.cpu().numpy()
-        except:
-            pass
-
-    def counting_backward_hook(self,module, inp, out):
-        module.visited_backwards = True
-
-    def get_score(self, K, y=None):
-        s, ld = np.linalg.slogdet(K)
-        return ld
-
-
     def __repr__(self):
         return f"{self.net.__repr__()}\n{self.out.__repr__()}"
 
@@ -87,7 +56,6 @@ class Net(nn.Module):
     """
     def _get_output_shape(self,model, image_dim):
         return np.prod(model(torch.rand(*(image_dim))).data.shape)
-
 
 
     def forward(self, x):
@@ -125,7 +93,6 @@ class Net(nn.Module):
                 loss, current = loss.item(), batch * len(X)
                 print(f"\tloss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
-        s = self.get_score(self.K)
         return avg_loss
 
 

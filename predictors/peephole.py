@@ -2,7 +2,7 @@ import itertools
 
 import numpy as np
 
-from Plot import *
+from plot import *
 
 import torch
 from torch import nn

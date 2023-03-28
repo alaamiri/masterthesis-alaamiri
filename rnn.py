@@ -2,7 +2,7 @@ import itertools
 
 import numpy as np
 
-from Plot import *
+from plot import *
 
 import torch
 from torch import nn
@@ -14,7 +14,7 @@ from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
 
-import Net
+import net
 from predictors import naswot
 
 # The RNN will output a layers depending the combination of those hyperparameter
@@ -117,18 +117,18 @@ class RNN(nn.Module):
 
         return nn_str, torch.tensor(prob_list)
 
-    def build_net(self, string_layer: list) -> Net.Net:
+    def build_net(self, string_layer: list) -> net.Net:
         """
 
         :param string_layer:
         :return:
         """
-        net = Net.Net(string_layer)
+        model = net.Net(string_layer)
 
-        return net
+        return model
 
 
-    def validate_net(self, model: Net.Net, epochs: int=EPOCHS) -> float:
+    def validate_net(self, model: net.Net, epochs: int=EPOCHS) -> float:
         """
         Method which will train and validate the network
 
@@ -204,7 +204,7 @@ class RNN(nn.Module):
         nn_str, prob_list = rnn.generate_NNstring(nb_layer)
         model = rnn.build_net(nn_str)
         predictor = naswot.NASWOT(self.loaders['train'], 64)
-        r = predictor.predict(model,5)
+        r = predictor.predict(model,2)
         self.reinforce(prob_list, r)
 
         return model, r
@@ -248,6 +248,10 @@ class RNN(nn.Module):
         best_model = None
         best_r = 0
         best_iter = 0
+
+        worst_model = None
+        worst_r = 1000000
+        worst_iter = 0
         for i in range(iteration):
             model, r = self.iter_predictor(nb_layers)
             if r > best_r:
@@ -255,13 +259,22 @@ class RNN(nn.Module):
                 best_model = model
                 best_iter = i
 
+            if r < worst_r:
+                worst_r = r
+                worst_model = model
+                worst_iter = i
+
             if i % 100 == 0:
                 print(f"\t[{i:>5d}/{iteration:>5d}]")
-
+        """
         r = rnn.validate_net(best_model)
         print("\nEnd of iteration loss =", f"{self.loss.item():>7f}", "----------")
         print("Best model at iteration", best_iter, ":", best_model)
         print("With Accurary of", f"{r * 100:>0.1f}%")
+        print()
+        r = rnn.validate_net(worst_model)
+        print("Worst model at iteration", worst_iter, ":", worst_model)
+        print("With Accurary of", f"{r * 100:>0.1f}%")"""
 
 
 
@@ -352,10 +365,10 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
-    nb_net = 1000
+    nb_net = 10000
     nb_layers = 7
     rnn = RNN(HIDDEN_SIZE)
-    rnn.run(nb_net,nb_layers)
-    #accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
-    #loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
+    rnn.run_predictor(nb_net,nb_layers)
+    accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
+    loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
 
