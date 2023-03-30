@@ -19,7 +19,6 @@ def accuracy_plot(accuracy_list, nb_net, nb_layers, seed=None):
     plt.show()
 
 def loss_plot(loss_list, nb_net, nb_layers, seed=None):
-    print(loss_list)
     #loss_list = loss_list.detach()
     plt.plot(range(1, len(loss_list) + 1), loss_list, 'c')
     #plt.plot(range(1, len(loss_list) + 1), loss_list, 'b.')

@@ -1,7 +1,6 @@
 import itertools
 
 import numpy as np
-
 from plot import *
 
 import torch
@@ -14,14 +13,17 @@ from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
 
+from nats_bench.genotype_utils import topology_str2structure
+from nats_bench.api_size import NATSsize
+from nats_bench.api_size import ALL_BASE_NAMES as sss_base_names
+from nats_bench.api_topology import NATStopology
+from nats_bench.api_topology import ALL_BASE_NAMES as tss_base_names
+from nats_bench import create
+
 import net
+import search_space
 from predictors import naswot
 
-# The RNN will output a layers depending the combination of those hyperparameter
-F_HEIGHT = [3]
-F_WIDTH = [3]
-N_FILTERS = [24,36,48,64]
-N_STRIDES = [1]
 
 # LSTM parameters
 HIDDEN_SIZE = 35
@@ -29,8 +31,8 @@ N_LAYER = 2
 
 EPOCHS = 5
 
-seed = 1
-torch.manual_seed(seed)
+seed = None
+#torch.manual_seed(seed)
 
 # 1097.6585461702298
 # Accuracy: 78.0%, Avg loss: 0.649093
@@ -48,18 +50,19 @@ class RNN(nn.Module):
     """
     A class representing the controller which generate the CNN depending of the search space
     """
-    def __init__(self, hidden_size: int):
+    def __init__(self, hidden_size: int, s_space : list, benchmark : bool=False):
+
         super(RNN, self).__init__()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using {self.device} device")
 
-        self.type_layers = self._init_layers()
+        self.s_space = s_space
 
-        self.input_size = len(self.type_layers)
+        self.input_size = len(self.s_space)
         self.hidden_size = hidden_size
         print("# of possible layers :", self.input_size)
-        self.output_size = len(self.type_layers)
+        self.output_size = len(self.s_space)
 
         self.lstm = nn.LSTM(self.input_size, hidden_size, num_layers=N_LAYER)
         self.hidden_to_hyper = nn.Linear(hidden_size, self.output_size)
@@ -96,7 +99,7 @@ class RNN(nn.Module):
         idx = torch.distributions.Categorical(logits=prob).sample()
 
 
-        return x, h, self.type_layers[int(idx)], prob[int(idx)]
+        return x, h, self.s_space[int(idx)], prob[int(idx)]
 
     def generate_NNstring(self, nb_layer: int) -> tuple:
         """
@@ -209,6 +212,37 @@ class RNN(nn.Module):
 
         return model, r
 
+    def iter_benchmark(self):
+        nn_str, prob_list = rnn.generate_NNstring(6)
+        arch = '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*nn_str)
+        #idx = self.api.query_by_arch(arch,'12')
+        idx = self.api.query_index_by_arch(arch)
+        info = self.api.get_more_info(idx,'cifar10')
+        r = info['train-accuracy']/100
+        self.reinforce(prob_list, r)
+
+        return idx, r
+
+    def run_benchmark(self, iteration):
+        self.api = create("nats_bench_data/NATS-tss-v1_0-3ffb9-simple", 'tss', fast_mode=True, verbose=False)
+        print(f'Generating {iteration} CNN of NATS-Bench ...')
+        self.loss = 0
+        self.loss_list = []
+        self.acc_list = []
+        best_model = None
+        best_r = 0
+        best_iter = 0
+        for i in range(iteration):
+            model, r = self.iter_benchmark()
+            if r > best_r:
+                best_r = r
+                best_model = model
+                best_iter = i
+            if i % 100 == 0:
+                print(f"\t[{i:>5d}/{iteration:>5d}]")
+        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}", "----------")
+        print("Best model at iteration", best_iter, ":", best_model)
+        print("With Accurary of", f"{best_r * 100:>0.1f}%")
     def run(self, iteration: int, nb_layers: int) -> None:
         """
         Main method which will for a given number of iteration generated several net and reinforce the controller
@@ -233,6 +267,8 @@ class RNN(nn.Module):
                 best_r = r
                 best_model = model
                 best_iter = i
+            if i % 100 == 0:
+                print(f"\t[{i:>5d}/{iteration:>5d}]")
             print(f"RNN loss: {self.loss:>7f}  [{i+1:>3d}/{iteration:>3d}]")
             print("=========================================================")
 
@@ -275,9 +311,6 @@ class RNN(nn.Module):
         r = rnn.validate_net(worst_model)
         print("Worst model at iteration", worst_iter, ":", worst_model)
         print("With Accurary of", f"{r * 100:>0.1f}%")"""
-
-
-
 
     def _get_dataloaders(self, batch_size : int=64, data_type : str="MNIST") -> dict:
         """
@@ -325,9 +358,7 @@ class RNN(nn.Module):
 
         return loaders
 
-
-    def _init_layers(self, f_height = F_HEIGHT, f_width = F_WIDTH,
-                     n_filter = N_FILTERS, n_strides = N_STRIDES) -> dict:
+    def _init_ss(self, ss) -> dict:
         """
         Generate all the combination of hyperparameters sets
 
@@ -343,12 +374,13 @@ class RNN(nn.Module):
             Return a dictionnary with in the form ID : layers where ID = [0,N] where N is the number of all possible
             combination
         """
-        a = [f_height, f_width, n_filter, n_strides]
+        a = ss
 
         a = list(itertools.product(*a))
         dict = {}
         for i in range(len(a)):
             dict[i] = a[i]
+
         return dict
 
     def _init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
@@ -365,10 +397,12 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
+
     nb_net = 10000
     nb_layers = 7
-    rnn = RNN(HIDDEN_SIZE)
-    rnn.run_predictor(nb_net,nb_layers)
+    rnn = RNN(HIDDEN_SIZE, s_space=search_space.nats_bench_tss, benchmark=True)
+    #rnn.run_predictor(nb_net,nb_layers)
+    rnn.run_benchmark(5000)
     accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
     loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
 
