@@ -4,7 +4,7 @@ import torch
 
 
 def accuracy_plot(accuracy_list, nb_net, nb_layers, seed=None):
-    plt.plot(range(1,len(accuracy_list)+1), accuracy_list, 'c')
+    plt.plot(range(1,len(accuracy_list)+1), accuracy_list, 'c.')
     #plt.plot(range(1,len(accuracy_list)+1), accuracy_list,'b.')
     plt.hlines(np.average(accuracy_list),0,len(accuracy_list)+1, 'r')
     plt.ylabel("Accuracy")
@@ -20,7 +20,7 @@ def accuracy_plot(accuracy_list, nb_net, nb_layers, seed=None):
 
 def loss_plot(loss_list, nb_net, nb_layers, seed=None):
     #loss_list = loss_list.detach()
-    plt.plot(range(1, len(loss_list) + 1), loss_list, 'c')
+    plt.plot(range(1, len(loss_list) + 1), loss_list, 'c.')
     #plt.plot(range(1, len(loss_list) + 1), loss_list, 'b.')
     plt.hlines(np.average(loss_list), 0, len(loss_list) + 1, 'r')
     plt.ylabel("Loss")

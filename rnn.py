@@ -1,7 +1,6 @@
 import itertools
 
 import numpy as np
-from plot import *
 
 import torch
 from torch import nn
@@ -50,8 +49,7 @@ class RNN(nn.Module):
     """
     A class representing the controller which generate the CNN depending of the search space
     """
-    def __init__(self, hidden_size: int, s_space : list, benchmark : bool=False):
-
+    def __init__(self, hidden_size: int, s_space : list):
         super(RNN, self).__init__()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -70,9 +68,9 @@ class RNN(nn.Module):
         self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
         self.h = self._init_hidden()
 
-        self.loaders = self._get_dataloaders()
-
         self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
+        self.prev_ema = -1
+        self.alpha = 0.65
 
     def forward(self, x, h):
         x = torch.unsqueeze(x,0)
@@ -101,7 +99,7 @@ class RNN(nn.Module):
 
         return x, h, self.s_space[int(idx)], prob[int(idx)]
 
-    def generate_NNstring(self, nb_layer: int) -> tuple:
+    def generate_arch(self, nb_layer: int=4) -> tuple:
         """
         Generate a string coresponding to an architecture to build
         :param nb_layer: int
@@ -120,41 +118,8 @@ class RNN(nn.Module):
 
         return nn_str, torch.tensor(prob_list)
 
-    def build_net(self, string_layer: list) -> net.Net:
-        """
-
-        :param string_layer:
-        :return:
-        """
-        model = net.Net(string_layer)
-
-        return model
-
-
-    def validate_net(self, model: net.Net, epochs: int=EPOCHS) -> float:
-        """
-        Method which will train and validate the network
-
-        :param model: Net.Net
-            The model to train and validate
-        :return:
-            The accuracy of the validation
-        """
-        #model.train_model(loaders['train'])
-
-        print(f"Starting training model: ==========================================\n {model} ")
-        print("==================================================================")
-        for epoch in range(epochs):
-            model.train(True)
-            print(f"Training epoch {epoch}...")
-            avg_loss = model.train_one_epoch(self.loaders['train'])
-            model.train(False)
-
-            accuracy = model.test_model(self.loaders['test'])
-
-        return accuracy
-
-
+    def ema(self, r, prev_ema):
+        return self.alpha * r + (1-self.alpha) * prev_ema
 
     def reinforce(self, prob: list, reward: float) -> None:
         """
@@ -166,24 +131,26 @@ class RNN(nn.Module):
             The accuracy of the net after validation
         :return: None
         """
-        # Keep in memory every network its action
-        # Build a tensor on the prob of those actions
-        # Build the network, train it and return its accuracy of testing step
-        # Compute the log of this prob and multiply it with the reward
-        # do the gradient ascent
 
         #log_prob = np.log(prob)
-        self.acc_list.append(reward)
+        #self.acc_list.append(reward)
         #self.loss = -torch.tensor(np.sum(log_prob * reward),requires_grad=True) \
         #            / len(log_prob)
         #G = torch.ones(1) * reward
 
-        self.loss = torch.sum(-torch.log(prob) * reward).requires_grad_() / len(prob) #tester - et + log
-        self.loss_list.append(self.loss.item())
+        if self.prev_ema == -1:
+            self.prev_ema = reward
+
+        self.prev_ema = self.ema(reward, self.prev_ema)
+        self.loss = -torch.sum(torch.log(prob) * (reward-self.ema(reward,self.prev_ema))).requires_grad_() / len(prob) #tester - et + log
+        #self.loss_list.append(self.loss.item())
+        curr_loss = self.loss.item()
 
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
+
+        return curr_loss
 
 
     def iter(self, nb_layer: int) -> tuple:
@@ -196,7 +163,7 @@ class RNN(nn.Module):
         :return: tuple
             Returns the models with its associated accuracy considered as the reward
         """
-        nn_str, prob_list = rnn.generate_NNstring(nb_layer)
+        nn_str, prob_list = rnn.generate_arch(nb_layer)
         model = rnn.build_net(nn_str)
         r = rnn.validate_net(model)
         self.reinforce(prob_list, r)
@@ -204,7 +171,7 @@ class RNN(nn.Module):
         return model, r
 
     def iter_predictor(self, nb_layer):
-        nn_str, prob_list = rnn.generate_NNstring(nb_layer)
+        nn_str, prob_list = rnn.generate_arch(nb_layer)
         model = rnn.build_net(nn_str)
         predictor = naswot.NASWOT(self.loaders['train'], 64)
         r = predictor.predict(model,2)
@@ -212,37 +179,7 @@ class RNN(nn.Module):
 
         return model, r
 
-    def iter_benchmark(self):
-        nn_str, prob_list = rnn.generate_NNstring(6)
-        arch = '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*nn_str)
-        #idx = self.api.query_by_arch(arch,'12')
-        idx = self.api.query_index_by_arch(arch)
-        info = self.api.get_more_info(idx,'cifar10')
-        r = info['train-accuracy']/100
-        self.reinforce(prob_list, r)
 
-        return idx, r
-
-    def run_benchmark(self, iteration):
-        self.api = create("nats_bench_data/NATS-tss-v1_0-3ffb9-simple", 'tss', fast_mode=True, verbose=False)
-        print(f'Generating {iteration} CNN of NATS-Bench ...')
-        self.loss = 0
-        self.loss_list = []
-        self.acc_list = []
-        best_model = None
-        best_r = 0
-        best_iter = 0
-        for i in range(iteration):
-            model, r = self.iter_benchmark()
-            if r > best_r:
-                best_r = r
-                best_model = model
-                best_iter = i
-            if i % 100 == 0:
-                print(f"\t[{i:>5d}/{iteration:>5d}]")
-        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}", "----------")
-        print("Best model at iteration", best_iter, ":", best_model)
-        print("With Accurary of", f"{best_r * 100:>0.1f}%")
     def run(self, iteration: int, nb_layers: int) -> None:
         """
         Main method which will for a given number of iteration generated several net and reinforce the controller
@@ -312,77 +249,6 @@ class RNN(nn.Module):
         print("Worst model at iteration", worst_iter, ":", worst_model)
         print("With Accurary of", f"{r * 100:>0.1f}%")"""
 
-    def _get_dataloaders(self, batch_size : int=64, data_type : str="MNIST") -> dict:
-        """
-        Generate the dataloaders used by the generated nets to train and to validate
-
-        :param batch_size: int
-            Size of the batch
-        :param data_type: string
-            The type of dataset
-        :return: dict
-            Return the loaders in a dict with keys 'train' and 'test'
-
-        """
-        #45 000
-        train_data = datasets.FashionMNIST(
-            root="data",
-            train=True,
-            download=True,
-            transform=ToTensor(),
-        )
-
-        #5000
-        test_data = datasets.FashionMNIST(
-            root="data",
-            train=False,
-            download=True,
-            transform=ToTensor(),
-        )
-
-        indices_train = torch.arange(45000)
-        indices_test = torch.arange(5000)
-
-        train_data = data_utils.Subset(train_data, indices_train)
-        test_data = data_utils.Subset(test_data, indices_test)
-
-        loaders = {
-            'train': DataLoader(train_data,
-                                batch_size=batch_size,
-                                shuffle=True),
-
-            'test': DataLoader(test_data,
-                               batch_size=batch_size,
-                               shuffle=True)
-        }
-
-        return loaders
-
-    def _init_ss(self, ss) -> dict:
-        """
-        Generate all the combination of hyperparameters sets
-
-        :param f_height: list
-            Filter height hyperparameter list
-        :param f_width: list
-            Filter width hyperparameter list
-        :param n_filter: list
-            Number of filter hyperparameter list
-        :param n_strides: list
-            Number of strides hyperparameter list
-        :return: dict
-            Return a dictionnary with in the form ID : layers where ID = [0,N] where N is the number of all possible
-            combination
-        """
-        a = ss
-
-        a = list(itertools.product(*a))
-        dict = {}
-        for i in range(len(a)):
-            dict[i] = a[i]
-
-        return dict
-
     def _init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
         """
         Initialize the hidden states of the controller
@@ -398,7 +264,8 @@ class RNN(nn.Module):
 
 if __name__ == '__main__':
 
-    nb_net = 10000
+    nb_net = 1000
+
     nb_layers = 7
     rnn = RNN(HIDDEN_SIZE, s_space=search_space.nats_bench_tss, benchmark=True)
     #rnn.run_predictor(nb_net,nb_layers)
