@@ -12,6 +12,8 @@ import search_space
 
 from nats_bench import create
 
+NATS_TTS_SIZE = 6
+
 seed = 1
 torch.manual_seed(seed)
 
@@ -19,7 +21,11 @@ NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 
 class Controller():
     def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
+        self.s_tag = s_space
         self.s_space = self._init_ss(s_space)
+
+
+        self.dataset = dataset
         self.benchmark = benchmark
         self.rnn_fn = rnn_fn
 
@@ -38,7 +44,7 @@ class Controller():
 
     def generate_arch(self, nb_layer):
         if self.benchmark:
-            nb_layer = 6
+            nb_layer = NATS_TTS_SIZE
         arch, prob_list = self.rnn.generate_arch(nb_layer)
 
         return arch, prob_list
@@ -55,8 +61,8 @@ class Controller():
 
     def evaluate_arch(self, model, predictor, epochs):
         if self.benchmark:
-            info = self.api.get_more_info(model, 'cifar10')
-            r = info['train-accuracy']/100
+            info = self.api.get_more_info(model, self.dataset)
+            r = info['test-accuracy']/100
 
             return r
         if predictor is not None:
@@ -77,7 +83,10 @@ class Controller():
         return r
 
     def update_rnn(self, r, prob_list):
-        return self.rnn.reinforce(prob_list, r)
+        loss = self.rnn.reinforce(prob_list, r)
+
+        return loss
+
 
     def iterate(self, nb_layer, predictor, epochs):
         arch, prob_list = self.generate_arch(nb_layer)
@@ -93,14 +102,18 @@ class Controller():
         best_model = None
         best_r = 0
         best_iter = 0
+        if self.benchmark:
+            self.l_distr = self._init_dist_list(NATS_TTS_SIZE)
+        else:
+            self.l_distr = self._init_dist_list(nb_layer)
         for i in range(nb_iterations):
             arch,model,r,rnn_loss = self.iterate(nb_layer,predictor,epochs)
-
+            self._add_dist_layer(arch)
             self.acc_list.append(r)
             self.loss_list.append(rnn_loss)
 
             if self.verbose:
-                if i % 100 == 0:
+                if i % 500 == 0:
                     print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
 
             if r > best_r:
@@ -110,9 +123,8 @@ class Controller():
 
         if self.verbose:
             print(f"Best model : {best_model}\nAccuracy : {best_r*100}")
+            self._get_dist_layers()
 
-        accuracy_plot(self.acc_list, nb_iterations, nb_layer)
-        loss_plot(self.loss_list, nb_iterations, nb_layer)
 
     def _init_ss(self, ss) -> dict:
         """
@@ -179,6 +191,31 @@ class Controller():
 
         return loaders
 
+    def _get_dist_layers(self):
+        for elem in self.l_distr:
+            elem[:] = [x/sum(elem) for x in elem]
+
+        print(self.l_distr)
+
+    def _add_dist_layer(self, arch):
+        for i in range(len(arch)):
+            curr_l = arch[i]
+            self.l_distr[i][self.s_tag.index(curr_l)] +=1
+
+
+    def _init_dist_list(self, nb_layers):
+        l = []
+        for i in range(nb_layers):
+            l.append([0]*len(self.s_tag))
+
+        return l
+
+    def get_bench_best(self):
+        print('There are {:} architectures on the topology search space'.format(len(self.api)))
+
+        best_arch_index, highest_valid_accuracy = self.api.find_best(dataset='cifar10', metric_on_set='ori-test', hp='12')
+        print(best_arch_index,highest_valid_accuracy)
+        #13714 84.89199999023438 cifar10-valid x-valid
 if __name__ == '__main__':
     nb_net = 5000
     nb_layers = 7
@@ -187,4 +224,10 @@ if __name__ == '__main__':
                    dataset='cifar10',
                    benchmark=True,
                    verbose=True)
-    c.run(nb_net,nb_layers, epochs=1)
+    #c.get_bench_best()
+    for _ in range(1):
+        pass
+        c.run(nb_net,nb_layers, epochs=1)
+        #accuracy_plot(c.acc_list, nb_net, nb_layers)
+        #loss_plot(c.loss_list, nb_net, nb_layers)
+

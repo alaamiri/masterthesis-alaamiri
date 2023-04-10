@@ -70,7 +70,7 @@ class RNN(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
         self.prev_ema = -1
-        self.alpha = 0.65
+        self.alpha = 0.85
 
     def forward(self, x, h):
         x = torch.unsqueeze(x,0)
@@ -114,7 +114,7 @@ class RNN(nn.Module):
         for _ in range(nb_layer):
             self.x, self.h, layer, prob = self.return_NNlayer(self.x, self.h)
             nn_str.append(layer)
-            prob_list.append(prob) #to remove the grad_fn field
+            prob_list.append(prob)
 
         return nn_str, torch.tensor(prob_list)
 
@@ -141,113 +141,16 @@ class RNN(nn.Module):
         if self.prev_ema == -1:
             self.prev_ema = reward
 
-        self.prev_ema = self.ema(reward, self.prev_ema)
-        self.loss = -torch.sum(torch.log(prob) * (reward-self.ema(reward,self.prev_ema))).requires_grad_() / len(prob) #tester - et + log
-        #self.loss_list.append(self.loss.item())
-        curr_loss = self.loss.item()
+        #print("prev_ema ", self.prev_ema)
+        self.curr_ema = self.ema(reward, self.prev_ema)
+        #print("curr_ema ", self.ema(reward, self.prev_ema))
+        self.loss = -torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_() / len(prob) #tester - et + log
+        #print("loss ", self.loss)
 
-        self.optimizer.zero_grad()
-        self.loss.backward()
-        self.optimizer.step()
+        self.prev_ema = self.curr_ema
+        #input()
 
-        return curr_loss
-
-
-    def iter(self, nb_layer: int) -> tuple:
-        """
-        Simulate one iteration, which is a generation of a net with a given numbre of layers,
-        its training and validation and the learning of the controller
-
-        :param nb_layer: int
-            Numbrer of layers of the generated nets
-        :return: tuple
-            Returns the models with its associated accuracy considered as the reward
-        """
-        nn_str, prob_list = rnn.generate_arch(nb_layer)
-        model = rnn.build_net(nn_str)
-        r = rnn.validate_net(model)
-        self.reinforce(prob_list, r)
-
-        return model, r
-
-    def iter_predictor(self, nb_layer):
-        nn_str, prob_list = rnn.generate_arch(nb_layer)
-        model = rnn.build_net(nn_str)
-        predictor = naswot.NASWOT(self.loaders['train'], 64)
-        r = predictor.predict(model,2)
-        self.reinforce(prob_list, r)
-
-        return model, r
-
-
-    def run(self, iteration: int, nb_layers: int) -> None:
-        """
-        Main method which will for a given number of iteration generated several net and reinforce the controller
-        depending of the accuracy of the nets
-
-        :param iteration: int
-            Number of iteration i.e number of net to generate
-        :param nb_layers: int
-            Number of layers per net
-        :return: None
-        """
-        print(f'Generating {iteration} CNN of {nb_layers} layers...')
-        self.loss = 0
-        self.loss_list = []
-        self.acc_list = []
-        best_model = None
-        best_r = 0
-        best_iter = 0
-        for i in range(iteration):
-            model, r = self.iter(nb_layers)
-            if r > best_r:
-                best_r = r
-                best_model = model
-                best_iter = i
-            if i % 100 == 0:
-                print(f"\t[{i:>5d}/{iteration:>5d}]")
-            print(f"RNN loss: {self.loss:>7f}  [{i+1:>3d}/{iteration:>3d}]")
-            print("=========================================================")
-
-        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}","----------")
-        print("Best model at iteration",best_iter,":", best_model)
-        print("With Accurary of", f"{best_r*100:>0.1f}%")
-
-    def run_predictor(self, iteration, nb_layers):
-        print(f'Generating {iteration} CNN of {nb_layers} layers...')
-        self.loss = 0
-        self.loss_list = []
-        self.acc_list = []
-        best_model = None
-        best_r = 0
-        best_iter = 0
-
-        worst_model = None
-        worst_r = 1000000
-        worst_iter = 0
-        for i in range(iteration):
-            model, r = self.iter_predictor(nb_layers)
-            if r > best_r:
-                best_r = r
-                best_model = model
-                best_iter = i
-
-            if r < worst_r:
-                worst_r = r
-                worst_model = model
-                worst_iter = i
-
-            if i % 100 == 0:
-                print(f"\t[{i:>5d}/{iteration:>5d}]")
-        """
-        r = rnn.validate_net(best_model)
-        print("\nEnd of iteration loss =", f"{self.loss.item():>7f}", "----------")
-        print("Best model at iteration", best_iter, ":", best_model)
-        print("With Accurary of", f"{r * 100:>0.1f}%")
-        print()
-        r = rnn.validate_net(worst_model)
-        print("Worst model at iteration", worst_iter, ":", worst_model)
-        print("With Accurary of", f"{r * 100:>0.1f}%")"""
+        return self.loss.item()
 
     def _init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
         """
@@ -263,13 +166,8 @@ class RNN(nn.Module):
 
 
 if __name__ == '__main__':
-
     nb_net = 1000
 
     nb_layers = 7
     rnn = RNN(HIDDEN_SIZE, s_space=search_space.nats_bench_tss, benchmark=True)
-    #rnn.run_predictor(nb_net,nb_layers)
-    rnn.run_benchmark(5000)
-    accuracy_plot(rnn.acc_list, nb_net, nb_layers, seed)
-    loss_plot(rnn.loss_list, nb_net, nb_layers, seed)
 
