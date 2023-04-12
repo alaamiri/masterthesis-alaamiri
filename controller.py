@@ -122,8 +122,13 @@ class Controller():
                 best_iter = i
 
         if self.verbose:
-            print(f"Best model : {best_model}\nAccuracy : {best_r*100}")
-            self._get_dist_layers()
+            print(f"Number of iteration :{nb_iterations}")
+            print(f"Best model : {best_model}\nAccuracy test: {best_r*100}")
+            info = self.api.get_more_info(best_model, self.dataset)
+            r = info['train-accuracy'] / 100
+            print(f"Accuracy train: {r}")
+            dist = self._get_dist_layers()
+            self._show_dist()
 
 
     def _init_ss(self, ss) -> dict:
@@ -195,7 +200,19 @@ class Controller():
         for elem in self.l_distr:
             elem[:] = [x/sum(elem) for x in elem]
 
-        print(self.l_distr)
+
+
+    def _show_dist(self):
+        # by Chat GPT
+        layers = self.s_tag
+        format_string = "{:<15}" + "{:<15}" * len(layers)
+        # Print the header
+        print(format_string.format("", *layers))
+
+        # Print the matrix values
+        for i, row in enumerate(self.l_distr):
+            print(format_string.format("Layer " + str(i), *["{:.4f}".format(val) for val in row]))
+
 
     def _add_dist_layer(self, arch):
         for i in range(len(arch)):
@@ -217,7 +234,7 @@ class Controller():
         print(best_arch_index,highest_valid_accuracy)
         #13714 84.89199999023438 cifar10-valid x-valid
 if __name__ == '__main__':
-    nb_net = 5000
+    nb_net = 10000
     nb_layers = 7
 
     c = Controller(s_space=search_space.nats_bench_tss,
