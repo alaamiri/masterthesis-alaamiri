@@ -4,6 +4,8 @@ import torch.utils.data as data_utils
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
+
+import plot
 from plot import *
 
 import net
@@ -61,8 +63,8 @@ class Controller():
 
     def evaluate_arch(self, model, predictor, epochs):
         if self.benchmark:
-            info = self.api.get_more_info(model, self.dataset)
-            r = info['test-accuracy']/100
+            info = self.api.get_more_info(model, self.dataset + "-valid")
+            r = info['valid-accuracy']/100
 
             return r
         if predictor is not None:
@@ -100,7 +102,7 @@ class Controller():
         self.loss_list = []
         self.acc_list = []
         best_model = None
-        best_r = 0
+        best_valid = 0
         best_iter = 0
         if self.benchmark:
             self.l_distr = self._init_dist_list(NATS_TTS_SIZE)
@@ -116,20 +118,36 @@ class Controller():
                 if i % 500 == 0:
                     print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
 
-            if r > best_r:
-                best_r = r
+            if r > best_valid:
+                best_valid = r
                 best_model = model
                 best_iter = i
 
         if self.verbose:
             print(f"Number of iteration :{nb_iterations}")
-            print(f"Best model : {best_model}\nAccuracy test: {best_r*100}")
+            print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
             info = self.api.get_more_info(best_model, self.dataset)
-            r = info['train-accuracy'] / 100
-            print(f"Accuracy train: {r}")
+            best_train = info['train-accuracy'] / 100
+            print(f"Accuracy train: {best_train}")
+            info = self.api.get_more_info(best_model, self.dataset)
+            best_test = info['test-accuracy'] / 100
+            print(f"Accuracy test: {best_test}")
             dist = self._get_dist_layers()
             self._show_dist()
 
+        return best_train, best_valid, best_test
+
+    def run_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
+        self.best_train, self.best_valid, self.best_test = [], [], []
+        for i in range(nb_run):
+            if self.verbose:
+                print(f"Run n#{i}")
+                best_train, best_valid, best_test = self.run(nb_iterations, nb_layer, predictor=None, epochs=12)
+                self.best_train.append(best_train)
+                self.best_valid.append(best_valid)
+                self.best_test.append(best_test)
+
+        plot.plot_several_runs(nb_run,self.best_train, self.best_valid, self.best_test)
 
     def _init_ss(self, ss) -> dict:
         """
@@ -200,8 +218,6 @@ class Controller():
         for elem in self.l_distr:
             elem[:] = [x/sum(elem) for x in elem]
 
-
-
     def _show_dist(self):
         # by Chat GPT
         layers = self.s_tag
@@ -213,12 +229,10 @@ class Controller():
         for i, row in enumerate(self.l_distr):
             print(format_string.format("Layer " + str(i), *["{:.4f}".format(val) for val in row]))
 
-
     def _add_dist_layer(self, arch):
         for i in range(len(arch)):
             curr_l = arch[i]
             self.l_distr[i][self.s_tag.index(curr_l)] +=1
-
 
     def _init_dist_list(self, nb_layers):
         l = []
@@ -227,6 +241,7 @@ class Controller():
 
         return l
 
+
     def get_bench_best(self):
         print('There are {:} architectures on the topology search space'.format(len(self.api)))
 
@@ -234,17 +249,18 @@ class Controller():
         print(best_arch_index,highest_valid_accuracy)
         #13714 84.89199999023438 cifar10-valid x-valid
 if __name__ == '__main__':
-    nb_net = 10000
+    nb_net = 200
     nb_layers = 7
+    nb_run = 20
 
     c = Controller(s_space=search_space.nats_bench_tss,
                    dataset='cifar10',
                    benchmark=True,
                    verbose=True)
     #c.get_bench_best()
-    for _ in range(1):
-        pass
-        c.run(nb_net,nb_layers, epochs=1)
-        #accuracy_plot(c.acc_list, nb_net, nb_layers)
-        #loss_plot(c.loss_list, nb_net, nb_layers)
+
+    #c.run(nb_net,nb_layers, epochs=1)
+    c.run_several(nb_run, nb_net, nb_layers)
+    #accuracy_plot(c.acc_list, nb_net, nb_layers)
+    #loss_plot(c.loss_list, nb_net, nb_layers)
 

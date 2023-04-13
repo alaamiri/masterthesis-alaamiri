@@ -68,7 +68,9 @@ class RNN(nn.Module):
         self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
         self.h = self._init_hidden()
 
-        self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
+        self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        #self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
+
         self.prev_ema = -1
         self.alpha = 0.85
 

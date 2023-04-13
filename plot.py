@@ -33,3 +33,14 @@ def loss_plot(loss_list, nb_net, nb_layers, seed=None):
         seed = ""
     plt.savefig(f"plot/loss_plot_{nb_net}_{nb_layers}{seed}.png")
     plt.show()
+
+def plot_several_runs(nb_run, train_l, valid_l, test_l):
+    plt.plot(range(1, len(train_l) + 1), train_l, 'c.')
+    plt.plot(range(1, len(valid_l) + 1), valid_l, 'g.')
+    plt.plot(range(1, len(test_l) + 1), test_l, 'r.')
+    plt.ylabel("%")
+    plt.xlabel("Runs")
+    # plt.xticks(range(1,len(accuracy_list),2))
+    plt.title(f"Accuracies of the best net on {nb_run} run(s)")
+    plt.legend(["Train", "Validation", "Test"])
+    plt.show()
