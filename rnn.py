@@ -146,13 +146,15 @@ class RNN(nn.Module):
         #print("prev_ema ", self.prev_ema)
         self.curr_ema = self.ema(reward, self.prev_ema)
         #print("curr_ema ", self.ema(reward, self.prev_ema))
-        self.loss = -torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_() / len(prob) #tester - et + log
+        val = torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_()
+        self.loss = -val
         #print("loss ", self.loss)
 
         self.prev_ema = self.curr_ema
         #input()
 
         return self.loss.item()
+
 
     def _init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
         """

@@ -1,4 +1,7 @@
 import itertools
+import random
+import numpy as np
+
 import torch
 import torch.utils.data as data_utils
 from torch.utils.data import DataLoader
@@ -147,7 +150,67 @@ class Controller():
                 self.best_valid.append(best_valid)
                 self.best_test.append(best_test)
 
+        if self.verbose:
+            print(f"Mean of best train acc: {np.average(self.best_train)}+-{np.std(self.best_train)}")
+            print(f"Mean of best valid acc: {np.average(self.best_valid)}+-{np.std(self.best_valid)}")
+            print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
+
         plot.plot_several_runs(nb_run,self.best_train, self.best_valid, self.best_test)
+
+    def random_search(self, nb_iterations, nb_layer, predictor=None, epochs=12):
+        print("Random Search")
+        self.loss_list = []
+        self.acc_list = []
+        best_model = None
+        best_valid = 0
+        best_iter = 0
+        for i in range(nb_iterations):
+            if self.benchmark:
+                size = len(self.api)
+                model = random.randint(0,size)
+                r, rnn_loss = self.evaluate_arch(model,predictor,epochs), 0
+                self.acc_list.append(r)
+                self.loss_list.append(rnn_loss)
+
+                if self.verbose:
+                    if i % 500 == 0:
+                        print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
+
+            if r > best_valid:
+                best_valid = r
+                best_model = model
+                best_iter = i
+
+        if self.verbose:
+            print(f"Number of iteration :{nb_iterations}")
+            print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
+            info = self.api.get_more_info(best_model, self.dataset)
+            best_train = info['train-accuracy'] / 100
+            print(f"Accuracy train: {best_train}")
+            info = self.api.get_more_info(best_model, self.dataset)
+            best_test = info['test-accuracy'] / 100
+            print(f"Accuracy test: {best_test}")
+
+        return best_train, best_valid, best_test
+
+    def random_search_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
+        self.best_train, self.best_valid, self.best_test = [], [], []
+        for i in range(nb_run):
+            if self.verbose:
+                print(f"Run n#{i}")
+                best_train, best_valid, best_test = self.random_search(
+                    nb_iterations, nb_layer, predictor=None, epochs=12)
+                self.best_train.append(best_train)
+                self.best_valid.append(best_valid)
+                self.best_test.append(best_test)
+
+        if self.verbose:
+            print(f"Mean of best train acc: {np.average(self.best_train)}+-{np.std(self.best_train)}")
+            print(f"Mean of best valid acc: {np.average(self.best_valid)}+-{np.std(self.best_valid)}")
+            print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
+
+        plot.plot_several_runs(nb_run, self.best_train, self.best_valid, self.best_test)
+
 
     def _init_ss(self, ss) -> dict:
         """
@@ -251,7 +314,7 @@ class Controller():
 if __name__ == '__main__':
     nb_net = 200
     nb_layers = 7
-    nb_run = 20
+    nb_run = 5
 
     c = Controller(s_space=search_space.nats_bench_tss,
                    dataset='cifar10',
@@ -261,6 +324,9 @@ if __name__ == '__main__':
 
     #c.run(nb_net,nb_layers, epochs=1)
     c.run_several(nb_run, nb_net, nb_layers)
-    #accuracy_plot(c.acc_list, nb_net, nb_layers)
-    #loss_plot(c.loss_list, nb_net, nb_layers)
+    accuracy_plot(c.acc_list, nb_net, nb_layers)
+    loss_plot(c.loss_list, nb_net, nb_layers)
+    c.random_search_several(nb_run, nb_net, nb_layers)
+    accuracy_plot(c.acc_list, nb_net, nb_layers)
+    loss_plot(c.loss_list, nb_net, nb_layers)
 
