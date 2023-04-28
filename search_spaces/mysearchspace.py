@@ -70,5 +70,5 @@ if __name__ == '__main__':
     operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
     cell_channels = [16, 32, 64]
     model = MySeachSpace(operations,3,3,cell_channels)
-    x = torch.rand(64,3,64,64)
+    x = torch.rand(1,3,64,64)
     y = model(x)
