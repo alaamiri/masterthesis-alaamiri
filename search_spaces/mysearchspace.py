@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 from primitives import (ResNetBasicblock, ReLUConvBN, Identity, Zero, AvgPool1x1)
+from cells import Cell
 import numpy as np
 from collections import OrderedDict
 
@@ -18,17 +19,17 @@ class MySeachSpace(nn.Module):
         super(MySeachSpace, self).__init__()
         self.channels = cell_channels
         self.num_classes = num_classes
-        self.model = self.set_model(in_channels, cell_channels, operations)
+        self.model = self.set_model(in_channels, cell_channels, operations, N)
         print(self.model)
 
-    def set_model(self, in_channels, cell_channels, operations):
+    def set_model(self, in_channels, cell_channels, operations, N):
         model = nn.Sequential(OrderedDict([
             ('pre_proc', self.pre_processing(in_channels, cell_channels[0])),
-            ('cells_block_1', self.cells(cell_channels[0], operations)),
+            ('cells_block_1', self.cells(cell_channels[0], operations, N)),
             ('res_block_1', self.residual_block(cell_channels[0], cell_channels[1])),
-            ('cells_2', self.cells(cell_channels[1], operations)),
+            ('cells_2', self.cells(cell_channels[1], operations, N)),
             ('res_block_2', self.residual_block(cell_channels[1], cell_channels[2])),
-            ('cells_block_3', self.cells(cell_channels[2], operations)),
+            ('cells_block_3', self.cells(cell_channels[2], operations, N)),
             ('post_proc', self.post_processing(cell_channels[2], self.num_classes))
         ]))
 
@@ -42,19 +43,9 @@ class MySeachSpace(nn.Module):
 
         return pp
 
-    def set_op(self, op, C):
-        OPERATIONS = {'identity': Identity(),
-                      'zero': Zero(stride=1),
-                      'conv_3x3': ReLUConvBN(C, C, kernel_size=3, affine=False, track_running_stats=False),
-                      'conv_1x1': ReLUConvBN(C, C, kernel_size=1, affine=False, track_running_stats=False),
-                      'avgpool_1x1': AvgPool1x1(kernel_size=3, stride=1, affine=False)
-                      }
-        return OPERATIONS[op]
-
-    def cells(self, C, operations):
-        ops = [self.set_op(op, C) for op in operations] * 5
-        c = nn.Sequential(*ops)
-
+    def cells(self, C, operations, N):
+        cells = [Cell(C, operations) for _ in range(N)]
+        c = nn.Sequential(*cells)
         return c
 
     def residual_block(self, C_in, C_out, stride = 2):
@@ -72,7 +63,12 @@ class MySeachSpace(nn.Module):
 
         return pp
 
+    def forward(self,x):
+        return self.model(x)
+
 if __name__ == '__main__':
     operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
     cell_channels = [16, 32, 64]
-    model = MySeachSpace(operations,5,3,cell_channels)
+    model = MySeachSpace(operations,3,3,cell_channels)
+    x = torch.rand(64,3,64,64)
+    y = model(x)
