@@ -1,28 +1,9 @@
-import itertools
-
-import numpy as np
-
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-import torch.utils.data as data_utils
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 import torch.nn.functional as F
 import torch.optim as optim
 
-from nats_bench.genotype_utils import topology_str2structure
-from nats_bench.api_size import NATSsize
-from nats_bench.api_size import ALL_BASE_NAMES as sss_base_names
-from nats_bench.api_topology import NATStopology
-from nats_bench.api_topology import ALL_BASE_NAMES as tss_base_names
-from nats_bench import create
-
-import net
-import search_space
-from predictors import naswot
-
+from search_spaces import search_space
 
 # LSTM parameters
 HIDDEN_SIZE = 35

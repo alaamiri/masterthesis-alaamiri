@@ -1,8 +1,6 @@
 import itertools
 import random
-import numpy as np
 
-import torch
 import torch.utils.data as data_utils
 from torch.utils.data import DataLoader
 from torchvision import datasets
@@ -11,9 +9,8 @@ from torchvision.transforms import ToTensor
 import plot
 from plot import *
 
-import net
 import rnn
-import search_space
+from search_spaces import search_space, net
 
 from nats_bench import create
 

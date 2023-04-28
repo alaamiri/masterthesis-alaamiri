@@ -15,19 +15,20 @@ from collections import OrderedDict
 
 class MySeachSpace(nn.Module):
     def __init__(self, operations, N, in_channels, cell_channels, num_classes = 10):
+        super(MySeachSpace, self).__init__()
         self.channels = cell_channels
         self.num_classes = num_classes
-        self.model = set_model(in_channels, cell_channels, operations)
+        self.model = self.set_model(in_channels, cell_channels, operations)
         print(self.model)
 
     def set_model(self, in_channels, cell_channels, operations):
         model = nn.Sequential(OrderedDict([
             ('pre_proc', self.pre_processing(in_channels, cell_channels[0])),
-            ('cells_1', self.cells(cell_channels[0], operations)),
+            ('cells_block_1', self.cells(cell_channels[0], operations)),
             ('res_block_1', self.residual_block(cell_channels[0], cell_channels[1])),
             ('cells_2', self.cells(cell_channels[1], operations)),
             ('res_block_2', self.residual_block(cell_channels[1], cell_channels[2])),
-            ('cells_3', self.cells(cell_channels[2], operations)),
+            ('cells_block_3', self.cells(cell_channels[2], operations)),
             ('post_proc', self.post_processing(cell_channels[2], self.num_classes))
         ]))
 
@@ -48,10 +49,10 @@ class MySeachSpace(nn.Module):
                       'conv_1x1': ReLUConvBN(C, C, kernel_size=1, affine=False, track_running_stats=False),
                       'avgpool_1x1': AvgPool1x1(kernel_size=3, stride=1, affine=False)
                       }
-        return OPERATIONS(op)
+        return OPERATIONS[op]
 
     def cells(self, C, operations):
-        ops = [set_op(op, C) for op in operations]
+        ops = [self.set_op(op, C) for op in operations] * 5
         c = nn.Sequential(*ops)
 
         return c
@@ -70,3 +71,8 @@ class MySeachSpace(nn.Module):
         )
 
         return pp
+
+if __name__ == '__main__':
+    operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
+    cell_channels = [16, 32, 64]
+    model = MySeachSpace(operations,5,3,cell_channels)

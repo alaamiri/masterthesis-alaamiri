@@ -4,7 +4,7 @@ from torch import nn
 
 class ResNetBasicblock(nn.Module):
     def __init__(self, C_in, C_out, stride, affine=True):
-        super(ResNetBasicblock, self).__init__(locals())
+        super(ResNetBasicblock, self).__init__()
         assert stride == 1 or stride == 2, "invalid stride {:}".format(stride)
         self.conv_a = ReLUConvBN(C_in, C_out, 3, stride)
         self.conv_b = ReLUConvBN(C_out, C_out, 3)
