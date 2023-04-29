@@ -6,6 +6,7 @@ class Cell(nn.Module):
     def __init__(self, C, operations):
         super(Cell, self).__init__()
         self.set_model(C, operations)
+        self.operations = operations
         #print(self.model)
 
     """def set_model(self, C, operations):
@@ -17,13 +18,16 @@ class Cell(nn.Module):
     def set_model(self, C, operations):
         ops = [self.set_op(op, C) for op in operations]
         c = nn.Sequential(*ops)
-
-        self.node_0 = self.set_op(operations[0], C)
-        self.node_1 = self.set_op(operations[1], C)
-        self.node_2 = self.set_op(operations[2], C)
-        self.node_3 = self.set_op(operations[3], C)
+        #'|op_0~0|+|op_1~0|op_2~1|'
+        self.op_0 = self.set_op(operations[0], C)
+        self.op_1 = self.set_op(operations[1], C)
+        self.op_2 = self.set_op(operations[2], C)
+        #self.node_3 = self.set_op(operations[3], C)
 
         return c
+
+    def get_arch_str(self):
+        return f'|{self.operations[0]}~0|+|{self.operations[1]}~0|{self.operations[2]}~1|'
 
     def set_op(self, op, C):
         OPERATIONS = {'identity': Identity(),
@@ -42,19 +46,29 @@ class Cell(nn.Module):
 
         return x"""
 
-    def forward(self, x):
+    """def forward(self, x):
         out_0 = self.node_0(x)
         out_1 = self.node_1(out_0)
-        out_2 = self.node_2(out_0)
-        out_3 = self.node_3(out_0+out_1+out_2)
+        out_2 = self.node_2(out_0+out_1)
+        #out_3 = self.node_3(out_0+out_1+out_2)
 
-        return x
+        return x"""
+
+    def forward(self, x):
+        out_0 = self.op_0(x)
+        out_1 = self.op_1(x)
+        out_3 = self.op_2(out_1)
+        #out_3 = self.node_3(out_0+out_1+out_2)
+
+        return out_1+out_3
 
 if __name__ == '__main__':
-    operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
+    operations = ['identity', 'conv_3x3', 'avgpool_1x1']
     cell_channels = [16, 32, 64]
     cell = Cell(cell_channels[0], operations)
     x = torch.rand([16,16,3,3])
-    print(x)
+    #print(x)
     y = cell(x)
-    print(y)
+    #print(y)
+    print(cell)
+    print(cell.get_arch_str())
