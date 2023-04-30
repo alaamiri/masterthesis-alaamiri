@@ -9,18 +9,25 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 from primitives import (ResNetBasicblock, ReLUConvBN, Identity, Zero, AvgPool1x1)
-from cells import Cell
+from cells import CellFCDAG
 import numpy as np
 from collections import OrderedDict
 
 
-class MySeachSpace(nn.Module):
-    def __init__(self, operations, N, in_channels, cell_channels, num_classes = 10):
-        super(MySeachSpace, self).__init__()
+class NASMedium(nn.Module):
+    def __init__(self, N, in_channels, cell_channels, num_classes = 10):
+        super(NASMedium, self).__init__()
         self.channels = cell_channels
         self.num_classes = num_classes
-        self.model = self.set_model(in_channels, cell_channels, operations, N)
-        print(self.model)
+        #self.model = self.set_model(in_channels, cell_channels, operations, N)
+
+        self.OPERATIONS = ['identity',
+                           'zero',
+                           'conv_3x3',
+                           'conv_1x1',
+                           'avgpool_1x1']
+        #Operations per cell
+        self.nb_op = 3
 
     def set_model(self, in_channels, cell_channels, operations, N):
         model = nn.Sequential(OrderedDict([
@@ -44,7 +51,7 @@ class MySeachSpace(nn.Module):
         return pp
 
     def cells(self, C, operations, N):
-        cells = [Cell(C, operations) for _ in range(N)]
+        cells = [CellFCDAG(C, operations) for _ in range(N)]
         c = nn.Sequential(*cells)
         return c
 
@@ -69,6 +76,6 @@ class MySeachSpace(nn.Module):
 if __name__ == '__main__':
     operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
     cell_channels = [16, 32, 64]
-    model = MySeachSpace(operations,3,3,cell_channels)
+    model = NASMedium(operations, 3, 3, cell_channels)
     x = torch.rand(1,3,64,64)
     y = model(x)
