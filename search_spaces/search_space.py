@@ -1,4 +1,4 @@
-import nasmedium
+from search_spaces import nasmedium
 
 ss_1 = [[3],               #FILTER_HEIGHT
         [3],               #FILTER_WIDTH,

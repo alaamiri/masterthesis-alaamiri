@@ -5,13 +5,13 @@ import torch.utils.data as data_utils
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
+import torch.nn as nn
 
 import plot
 from plot import *
 
 import rnn
-from search_spaces import search_space, net
-
+from search_spaces import (search_space, nasmedium, net)
 from nats_bench import create
 
 NATS_TTS_SIZE = 6
@@ -23,15 +23,16 @@ NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 
 class Controller():
     def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
-        self.s_tag = s_space
-        self.s_space = self._init_ss(s_space)
+        self.search_space = search_space.ss_selector(s_space)
+        self.s_tag = self.search_space.OPERATIONS
+        #self.s_space = self._init_ss(s_space)
 
 
         self.dataset = dataset
         self.benchmark = benchmark
         self.rnn_fn = rnn_fn
 
-        self.rnn = rnn.RNN(rnn.HIDDEN_SIZE, self.s_space)
+        self.rnn = rnn.RNN(rnn.HIDDEN_SIZE, self.s_tag)
         self.loaders = self._get_dataloaders(batch_size=64)
 
         self.verbose = verbose
@@ -42,22 +43,33 @@ class Controller():
                               verbose=False)
 
         if verbose:
-            print("dataset : {:}\nbenchmark : {:}".format(dataset, benchmark))
+            print("dataset : {:}\nsearch space: {:}\nbenchmark : {:}".format(dataset, s_space,benchmark))
+
+
 
     def generate_arch(self, nb_layer):
         if self.benchmark:
             nb_layer = NATS_TTS_SIZE
-        arch, prob_list = self.rnn.generate_arch(nb_layer)
+        arch_l, prob_list = self.rnn.generate_arch(nb_layer)
 
-        return arch, prob_list
+        return arch_l, prob_list
 
-    def build_arch(self, arch):
+    """def build_arch(self, arch):
         model = None
         if self.benchmark:
             arch = '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*arch)
             model = self.api.query_index_by_arch(arch)
         else:
             model = net.Net(arch)
+
+        return model"""
+
+    def build_arch(self, arch_l):
+        model = self.search_space.get_model(arch_l)
+        self.loss_fn = nn.CrossEntropyLoss()
+        # self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
+        self.optimizer = torch.optim.SGD(model.parameters(), lr=5e-2, momentum=0.9,
+                                         weight_decay=1e-4, nesterov=True)
 
         return model
 
@@ -74,13 +86,56 @@ class Controller():
 
         return r
 
+    def train_one_epoch(self, model, dataloader, writer=None):
+        size = len(dataloader.dataset)
+
+        avg_loss = 0
+
+        for batch, (X, y) in enumerate(dataloader):
+            # X, y = X.to(self.device), y.to(self.device)
+            # Compute prediction error
+            # print(X.size())
+
+            pred = model(X)
+
+            loss = self.loss_fn(pred, y)
+
+            # Backpropagation
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            if batch % 100 == 0:
+                loss, current = loss.item(), batch * len(X)
+                print(f"\tloss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+        return avg_loss
+
+    def test_model(self, model, dataloader):
+        size = len(dataloader.dataset)
+        num_batches = len(dataloader)
+        model.eval()
+        test_loss, correct = 0, 0
+        with torch.no_grad():
+            for X, y in dataloader:
+                # X, y = X.to(device), y.to(device)
+                pred = model(X)
+                test_loss += self.loss_fn(pred, y).item()
+                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+        test_loss /= num_batches
+        correct /= size
+        print(f"\tTest Error: \n \t\tAccuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+        return correct
+
     def validate_arch(self, model, epochs):
         for epoch in range(epochs):
             model.train(True)
-            avg_loss = model.train_one_epoch(self.loaders['train'])
+            avg_loss = self.train_one_epoch(model, self.loaders['train'])
             model.train(False)
 
-            r = model.test_model(self.loaders['test'])
+            r = self.test_model(model, self.loaders['test'])
 
         return r
 
@@ -91,12 +146,12 @@ class Controller():
 
 
     def iterate(self, nb_layer, predictor, epochs):
-        arch, prob_list = self.generate_arch(nb_layer)
-        model = self.build_arch(arch)
+        arch_l, prob_list = self.generate_arch(nb_layer)
+        model = self.build_arch(arch_l)
         r = self.evaluate_arch(model, predictor, epochs)
         rnn_loss = self.update_rnn(r, prob_list)
 
-        return arch,model,r,rnn_loss
+        return arch_l,model,r,rnn_loss
 
     def run(self, nb_iterations, nb_layer, predictor=None, epochs=12):
         self.loss_list = []
@@ -241,7 +296,7 @@ class Controller():
 
         """
         #45 000
-        train_data = datasets.FashionMNIST(
+        train_data = datasets.CIFAR10(
             root="data",
             train=True,
             download=True,
@@ -249,14 +304,14 @@ class Controller():
         )
 
         #5000
-        test_data = datasets.FashionMNIST(
+        test_data = datasets.CIFAR10(
             root="data",
             train=False,
             download=True,
             transform=ToTensor(),
         )
 
-        indices_train = torch.arange(45000)
+        indices_train = torch.arange(5000)
         indices_test = torch.arange(5000)
 
         train_data = data_utils.Subset(train_data, indices_train)
@@ -313,17 +368,21 @@ if __name__ == '__main__':
     nb_layers = 7
     nb_run = 5
 
-    c = Controller(s_space=search_space.nats_bench_tss,
+    c = Controller(s_space='nas_medium',
                    dataset='cifar10',
-                   benchmark=True,
+                   benchmark=False,
                    verbose=True)
     #c.get_bench_best()
 
     #c.run(nb_net,nb_layers, epochs=1)
-    c.run_several(nb_run, nb_net, nb_layers)
+
+    """c.run_several(nb_run, nb_net, nb_layers)
     accuracy_plot(c.acc_list, nb_net, nb_layers)
     loss_plot(c.loss_list, nb_net, nb_layers)
     c.random_search_several(nb_run, nb_net, nb_layers)
     accuracy_plot(c.acc_list, nb_net, nb_layers)
-    loss_plot(c.loss_list, nb_net, nb_layers)
+    loss_plot(c.loss_list, nb_net, nb_layers)"""
+
+    print(c.iterate(4, None,1))
+
 

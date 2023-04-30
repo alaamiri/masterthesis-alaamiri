@@ -67,49 +67,7 @@ class Net(nn.Module):
 
         return out_y
 
-    def train_one_epoch(self, dataloader, writer=None):
-        size = len(dataloader.dataset)
-
-        avg_loss = 0
-
-        for batch, (X, y) in enumerate(dataloader):
-            # X, y = X.to(self.device), y.to(self.device)
-            # Compute prediction error
-            #print(X.size())
 
 
-            pred = self(X)
 
-            loss = self.loss_fn(pred, y)
-
-            # Backpropagation
-
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            
-            
-            if batch % 100 == 0:
-                loss, current = loss.item(), batch * len(X)
-                print(f"\tloss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-        return avg_loss
-
-
-    def test_model(self, dataloader):
-        size = len(dataloader.dataset)
-        num_batches = len(dataloader)
-        self.eval()
-        test_loss, correct = 0, 0
-        with torch.no_grad():
-            for X, y in dataloader:
-                # X, y = X.to(device), y.to(device)
-                pred = self(X)
-                test_loss += self.loss_fn(pred, y).item()
-                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-        test_loss /= num_batches
-        correct /= size
-        print(f"\tTest Error: \n \t\tAccuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-
-        return correct
 
