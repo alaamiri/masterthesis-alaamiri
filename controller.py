@@ -12,20 +12,22 @@ from plot import *
 
 import rnn
 from search_spaces import (search_space, nasmedium, net)
+from predictors import naswot
 from nats_bench import create
 
-NATS_TTS_SIZE = 6
+
+
 
 seed = 1
 torch.manual_seed(seed)
 
-NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
+
 
 class Controller():
     def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
         self.search_space = search_space.ss_selector(s_space)
         self.s_tag = self.search_space.OPERATIONS
-        #self.s_space = self._init_ss(s_space)
+        self.nb_ops = self.search_space.NB_OPS
 
 
         self.dataset = dataset
@@ -36,21 +38,14 @@ class Controller():
         self.loaders = self._get_dataloaders(batch_size=64)
 
         self.verbose = verbose
-        if benchmark:
-            self.api = create(NATS_BENCH_TSS_PATH,
-                              'tss',
-                              fast_mode=True,
-                              verbose=False)
 
         if verbose:
             print("dataset : {:}\nsearch space: {:}\nbenchmark : {:}".format(dataset, s_space,benchmark))
 
 
 
-    def generate_arch(self, nb_layer):
-        if self.benchmark:
-            nb_layer = NATS_TTS_SIZE
-        arch_l, prob_list = self.rnn.generate_arch(nb_layer)
+    def generate_arch(self):
+        arch_l, prob_list = self.rnn.generate_arch(self.nb_ops)
 
         return arch_l, prob_list
 
@@ -66,23 +61,27 @@ class Controller():
 
     def build_arch(self, arch_l):
         model = self.search_space.get_model(arch_l)
-        self.loss_fn = nn.CrossEntropyLoss()
-        # self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
-        self.optimizer = torch.optim.SGD(model.parameters(), lr=5e-2, momentum=0.9,
-                                         weight_decay=1e-4, nesterov=True)
+        if not self.benchmark:
+            self.loss_fn = nn.CrossEntropyLoss()
+            # self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
+            self.optimizer = torch.optim.SGD(model.parameters(), lr=5e-2, momentum=0.9,
+                                             weight_decay=1e-4, nesterov=True)
 
         return model
 
     def evaluate_arch(self, model, predictor, epochs):
-        if self.benchmark:
-            info = self.api.get_more_info(model, self.dataset + "-valid")
-            r = info['valid-accuracy']/100
-
-            return r
         if predictor is not None:
-            pass
+            r = self.predict_acc(model, predictor)
         else:
             r = self.validate_arch(model, epochs)
+
+        return r
+
+    def predict_acc(self, model, predictor):
+        r = None
+        if predictor == 'naswot':
+            p = naswot.NASWOT(self.loaders['train'], 64)
+            r = p.predict(model)
 
         return r
 
@@ -92,7 +91,7 @@ class Controller():
         avg_loss = 0
 
         for batch, (X, y) in enumerate(dataloader):
-            # X, y = X.to(self.device), y.to(self.device)
+            #X, y = X.to(self.device), y.to(self.device)
             # Compute prediction error
             # print(X.size())
 
@@ -130,10 +129,14 @@ class Controller():
         return correct
 
     def validate_arch(self, model, epochs):
-        for epoch in range(epochs):
-            model.train(True)
-            avg_loss = self.train_one_epoch(model, self.loaders['train'])
-            model.train(False)
+        if self.benchmark:
+            r = self.search_space.get_score_from_api(model, self.dataset)
+
+        else:
+            for epoch in range(epochs):
+                model.train(True)
+                avg_loss = self.train_one_epoch(model, self.loaders['train'])
+                model.train(False)
 
             r = self.test_model(model, self.loaders['test'])
 
@@ -145,8 +148,8 @@ class Controller():
         return loss
 
 
-    def iterate(self, nb_layer, predictor, epochs):
-        arch_l, prob_list = self.generate_arch(nb_layer)
+    def iterate(self, predictor, epochs):
+        arch_l, prob_list = self.generate_arch()
         model = self.build_arch(arch_l)
         r = self.evaluate_arch(model, predictor, epochs)
         rnn_loss = self.update_rnn(r, prob_list)
@@ -311,11 +314,11 @@ class Controller():
             transform=ToTensor(),
         )
 
-        indices_train = torch.arange(5000)
+        """indices_train = torch.arange(5000)
         indices_test = torch.arange(5000)
 
         train_data = data_utils.Subset(train_data, indices_train)
-        test_data = data_utils.Subset(test_data, indices_test)
+        test_data = data_utils.Subset(test_data, indices_test)"""
 
         loaders = {
             'train': DataLoader(train_data,
@@ -368,9 +371,9 @@ if __name__ == '__main__':
     nb_layers = 7
     nb_run = 5
 
-    c = Controller(s_space='nas_medium',
+    c = Controller(s_space='nas_bench',
                    dataset='cifar10',
-                   benchmark=False,
+                   benchmark=True,
                    verbose=True)
     #c.get_bench_best()
 
@@ -383,6 +386,7 @@ if __name__ == '__main__':
     accuracy_plot(c.acc_list, nb_net, nb_layers)
     loss_plot(c.loss_list, nb_net, nb_layers)"""
 
-    print(c.iterate(4, None,1))
+    print(c.iterate(predictor=None,
+                    epochs=1))
 
 

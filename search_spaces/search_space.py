@@ -1,4 +1,4 @@
-from search_spaces import nasmedium
+from search_spaces import nasmedium, nasbench
 
 ss_1 = [[3],               #FILTER_HEIGHT
         [3],               #FILTER_WIDTH,
@@ -22,7 +22,8 @@ nasmedium_arg = [5,            #N
 def ss_selector(ss_string):
     ss = None
     if ss_string == 'nas_bench':
-        pass
+        ss = nasbench.NasBench()
+
     elif ss_string == 'nas_medium':
         ss = nasmedium.NASMedium(N=nasmedium_arg[0],
                                  in_channels=nasmedium_arg[1],

@@ -21,7 +21,7 @@ class NASMedium(AbsSS):
                            'conv_1x1',
                            'avgpool_1x1']
         #Operations per cell
-        self.nb_op = 3
+        self.NB_OPS = 3
 
     def get_model(self, operations):
         model = nn.Sequential(OrderedDict([
