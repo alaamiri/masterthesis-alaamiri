@@ -25,7 +25,7 @@ torch.manual_seed(seed)
 
 class Controller():
     def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
-        self.search_space = search_space.ss_selector(s_space)
+        self.search_space = search_space.ss_selector(s_space, dataset)
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
 
@@ -60,8 +60,11 @@ class Controller():
         return model"""
 
     def build_arch(self, arch_l):
-        model = self.search_space.get_model(arch_l)
+        model = None
+        if self.benchmark:
+            model = self.search_space.get_arch_id(arch_l)
         if not self.benchmark:
+            model = self.search_space.get_model(arch_l)
             self.loss_fn = nn.CrossEntropyLoss()
             # self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3) #optim.AdamP or SGDP or SGDW or SWATS
             self.optimizer = torch.optim.SGD(model.parameters(), lr=5e-2, momentum=0.9,
@@ -130,7 +133,7 @@ class Controller():
 
     def validate_arch(self, model, epochs):
         if self.benchmark:
-            r = self.search_space.get_score_from_api(model, self.dataset)
+            r = self.search_space.get_score_from_api(model)
 
         else:
             for epoch in range(epochs):
@@ -371,9 +374,9 @@ if __name__ == '__main__':
     nb_layers = 7
     nb_run = 5
 
-    c = Controller(s_space='nas_bench',
+    c = Controller(s_space='nas_medium',
                    dataset='cifar10',
-                   benchmark=True,
+                   benchmark=False,
                    verbose=True)
     #c.get_bench_best()
 
@@ -386,7 +389,7 @@ if __name__ == '__main__':
     accuracy_plot(c.acc_list, nb_net, nb_layers)
     loss_plot(c.loss_list, nb_net, nb_layers)"""
 
-    print(c.iterate(predictor=None,
+    print(c.iterate(predictor='naswot',
                     epochs=1))
 
 

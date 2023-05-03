@@ -19,10 +19,10 @@ nasmedium_arg = [5,            #N
                  10]           #num_classes
 
 
-def ss_selector(ss_string):
+def ss_selector(ss_string, dataset):
     ss = None
     if ss_string == 'nas_bench':
-        ss = nasbench.NasBench()
+        ss = nasbench.NasBench(dataset)
 
     elif ss_string == 'nas_medium':
         ss = nasmedium.NASMedium(N=nasmedium_arg[0],
