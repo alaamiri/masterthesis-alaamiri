@@ -44,7 +44,6 @@ class NasBench(AbsSS):
         return model
 
     def get_score_from_api(self, model):
-        print(model)
         info = self.api.get_more_info(model, self.dataset + "-valid")
         r = info['valid-accuracy'] / 100
 

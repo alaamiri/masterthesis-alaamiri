@@ -21,10 +21,10 @@ nasmedium_arg = [5,            #N
 
 def ss_selector(ss_string, dataset):
     ss = None
-    if ss_string == 'nas_bench':
+    if ss_string == 'nasbench':
         ss = nasbench.NasBench(dataset)
 
-    elif ss_string == 'nas_medium':
+    elif ss_string == 'nasmedium':
         ss = nasmedium.NASMedium(N=nasmedium_arg[0],
                                  in_channels=nasmedium_arg[1],
                                  cell_channels=nasmedium_arg[2],

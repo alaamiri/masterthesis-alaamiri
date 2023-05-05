@@ -1,6 +1,8 @@
 import itertools
 import random
 
+import numpy as np
+import torch
 import torch.utils.data as data_utils
 from torch.utils.data import DataLoader
 from torchvision import datasets
@@ -16,15 +18,17 @@ from predictors import naswot
 from nats_bench import create
 
 
-
-
-seed = 1
-torch.manual_seed(seed)
-
+#seed = 1
+#torch.manual_seed(seed)
 
 
 class Controller():
     def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
+        if verbose:
+            print("Controller"                  
+                  "\n   +--- Dataset: {:}"
+                  "\n   +--- Search Space: {:}"
+                  "\n   +--- Benchmark mode: {:}".format(dataset, s_space,benchmark))
         self.search_space = search_space.ss_selector(s_space, dataset)
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
@@ -39,8 +43,8 @@ class Controller():
 
         self.verbose = verbose
 
-        if verbose:
-            print("dataset : {:}\nsearch space: {:}\nbenchmark : {:}".format(dataset, s_space,benchmark))
+
+            #print("dataset : {:}\nsearch space: {:}\nbenchmark : {:}".format(dataset, s_space,benchmark))
 
 
 
@@ -155,28 +159,38 @@ class Controller():
         arch_l, prob_list = self.generate_arch()
         model = self.build_arch(arch_l)
         r = self.evaluate_arch(model, predictor, epochs)
+
         rnn_loss = self.update_rnn(r, prob_list)
 
         return arch_l,model,r,rnn_loss
 
-    def run(self, nb_iterations, nb_layer, predictor=None, epochs=12):
+    def run(self, nb_iterations, predictor=None, seed=None, epochs=12):
+        if self.verbose:
+            print("\tRunning =========================="
+                  "\n\t   +--- # iterations: {:}"
+                  "\n\t   +--- Predictor: {:}"
+                  "\n\t   +--- seed: {:}"
+                  "\n\t   +--- EPOCH: {:}".format(nb_iterations, predictor, seed, epochs))
+
+        if seed is not None:
+            torch.manual_seed(seed)
+
         self.loss_list = []
         self.acc_list = []
         best_model = None
         best_valid = 0
         best_iter = 0
-        if self.benchmark:
-            self.l_distr = self._init_dist_list(NATS_TTS_SIZE)
-        else:
-            self.l_distr = self._init_dist_list(nb_layer)
+
+        self.op_dist = self._init_dist_list()
+
         for i in range(nb_iterations):
-            arch,model,r,rnn_loss = self.iterate(nb_layer,predictor,epochs)
+            arch,model,r,rnn_loss = self.iterate(predictor,epochs)
             self._add_dist_layer(arch)
             self.acc_list.append(r)
             self.loss_list.append(rnn_loss)
 
             if self.verbose:
-                if i % 500 == 0:
+                if i % (nb_iterations//5) == 0:
                     print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
 
             if r > best_valid:
@@ -184,7 +198,7 @@ class Controller():
                 best_model = model
                 best_iter = i
 
-        if self.verbose:
+        """if self.verbose:
             print(f"Number of iteration :{nb_iterations}")
             print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
             info = self.api.get_more_info(best_model, self.dataset)
@@ -192,11 +206,12 @@ class Controller():
             print(f"Accuracy train: {best_train}")
             info = self.api.get_more_info(best_model, self.dataset)
             best_test = info['test-accuracy'] / 100
-            print(f"Accuracy test: {best_test}")
-            dist = self._get_dist_layers()
-            self._show_dist()
+            print(f"Accuracy test: {best_test}")"""
+        #dist = self._get_dist_layers()
+        #self._show_dist()
 
-        return best_train, best_valid, best_test
+        #return best_train, best_valid, best_test
+        return best_model, best_valid, best_iter
 
     def run_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
         self.best_train, self.best_valid, self.best_test = [], [], []
@@ -336,7 +351,7 @@ class Controller():
         return loaders
 
     def _get_dist_layers(self):
-        for elem in self.l_distr:
+        for elem in self.op_dist:
             elem[:] = [x/sum(elem) for x in elem]
 
     def _show_dist(self):
@@ -347,20 +362,21 @@ class Controller():
         print(format_string.format("", *layers))
 
         # Print the matrix values
-        for i, row in enumerate(self.l_distr):
+        for i, row in enumerate(self.op_dist):
             print(format_string.format("Layer " + str(i), *["{:.4f}".format(val) for val in row]))
 
     def _add_dist_layer(self, arch):
         for i in range(len(arch)):
             curr_l = arch[i]
-            self.l_distr[i][self.s_tag.index(curr_l)] +=1
+            self.op_dist[i][self.s_tag.index(curr_l)] +=1
 
-    def _init_dist_list(self, nb_layers):
+    def _init_dist_list(self):
+        nb_layers = self.nb_ops
         l = []
         for i in range(nb_layers):
             l.append([0]*len(self.s_tag))
 
-        return l
+        return np.array(l)
 
 
     def get_bench_best(self):

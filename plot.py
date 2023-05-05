@@ -1,6 +1,6 @@
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
-import torch
 
 
 def accuracy_plot(accuracy_list, nb_net, nb_layers, seed=None):
@@ -43,4 +43,9 @@ def plot_several_runs(nb_run, train_l, valid_l, test_l):
     # plt.xticks(range(1,len(accuracy_list),2))
     plt.title(f"Accuracies of the best net on {nb_run} run(s)")
     plt.legend(["Train", "Validation", "Test"])
+    plt.show()
+
+def dist_heatmap(dist_mat,op):
+    sns.set()
+    ax = sns.heatmap(dist_mat, xticklabels=op)
     plt.show()

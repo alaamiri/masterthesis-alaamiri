@@ -11,9 +11,6 @@ N_LAYER = 2
 
 EPOCHS = 5
 
-seed = None
-#torch.manual_seed(seed)
-
 # 1097.6585461702298
 # Accuracy: 78.0%, Avg loss: 0.649093
 """
@@ -40,7 +37,6 @@ class RNN(nn.Module):
 
         self.input_size = len(self.s_space)
         self.hidden_size = hidden_size
-        print("# of possible layers :", self.input_size)
         self.output_size = len(self.s_space)
 
         self.lstm = nn.LSTM(self.input_size, hidden_size, num_layers=N_LAYER)
