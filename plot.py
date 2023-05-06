@@ -45,7 +45,11 @@ def plot_several_runs(nb_run, train_l, valid_l, test_l):
     plt.legend(["Train", "Validation", "Test"])
     plt.show()
 
-def dist_heatmap(dist_mat,op):
+def dist_heatmap(dist_mat, op, title):
     sns.set()
-    ax = sns.heatmap(dist_mat, xticklabels=op)
+    yticks = [f"op{i}" for i in range(len(dist_mat))]
+    ax = sns.heatmap(dist_mat, xticklabels=op, yticklabels=yticks, cmap='magma')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, ha="right")
+    plt.title(title)
     plt.show()

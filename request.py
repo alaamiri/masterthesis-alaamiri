@@ -32,23 +32,29 @@ def reinforce_nasbench(seeds, dataset):
                    dataset=dataset,
                    benchmark=True,
                    verbose=True)
-    l = []
+    l_model = []
+    l_valid = []
     l_dist = []
     for seed in seeds:
         best_model, best_valid, best_iter = c.run(nb_iterations=NB_NET,
                                                   predictor=None,
                                                   seed=seed,
                                                   epochs=EPOCHS)
+        l_model.append(best_model)
+        l_valid.append(best_valid)
         l_dist.append(c.op_dist)
         print("Best model: {:}"
               "\n Acc valid: {:>.3f}"
-              "\n At iter: {:}".format(best_model,best_valid,best_iter))
+              "\n At iter: {:}".format(best_model, best_valid, best_iter))
 
-        l.append(best_model)
+    avg_valid, std_valid = np.average(l_valid), np.std(l_valid)
+    print("avg: {:>.3f}, std: {:>.3f}".format(avg_valid, std_valid))
 
     sum_dist = matrix_sum(l_dist) / len(l_dist)
-    print(sum_dist)
-    plot.dist_heatmap(sum_dist, c.s_tag)
+
+    plot.dist_heatmap(sum_dist,
+                      ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
+                      "Operations distribution with REINFORCE in NAS-Bench for 5 seeds")
 
 def reinforce_nasbench_naswot(seeds, dataset):
     for seed in seeds:
