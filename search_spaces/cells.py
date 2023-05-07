@@ -83,6 +83,7 @@ class CellDAG(nn.Module):
 
         return out_3
 
+
 if __name__ == '__main__':
     operations = ['identity', 'conv_3x3', 'avgpool_1x1']
     cell_channels = [16, 32, 64]

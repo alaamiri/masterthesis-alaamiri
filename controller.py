@@ -1,5 +1,6 @@
 import itertools
 import random
+import time
 
 import numpy as np
 import torch
@@ -23,7 +24,7 @@ from nats_bench import create
 
 
 class Controller():
-    def __init__(self, s_space, dataset='cifar10', rnn_fn='REINFORCE', benchmark=False, verbose=False):
+    def __init__(self, s_space, dataset='cifar10', rnn_fn='reinforce', benchmark=False, verbose=False):
         if verbose:
             print("Controller"                  
                   "\n   +--- Dataset: {:}"
@@ -33,6 +34,7 @@ class Controller():
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
 
+        self.optimizer = rnn_fn
 
         self.dataset = dataset
         self.benchmark = benchmark
@@ -44,25 +46,21 @@ class Controller():
         self.verbose = verbose
 
 
-            #print("dataset : {:}\nsearch space: {:}\nbenchmark : {:}".format(dataset, s_space,benchmark))
-
-
-
-    def generate_arch(self):
-        arch_l, prob_list = self.rnn.generate_arch(self.nb_ops)
+    def generate_arch(self, optimizer):
+        if optimizer=="reinforce":
+            arch_l, prob_list = self.rnn.generate_arch(self.nb_ops)
+        elif optimizer=="randomsearch":
+            arch_l, prob_list = self.generate_random_arch(self.nb_ops)
 
         return arch_l, prob_list
 
-    """def build_arch(self, arch):
-        model = None
-        if self.benchmark:
-            arch = '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*arch)
-            model = self.api.query_index_by_arch(arch)
-        else:
-            model = net.Net(arch)
+    def generate_random_arch(self, nb_ops):
+        arch_l = []
+        for _ in range(nb_ops):
+            i = random.randint(0,len(self.s_tag)-1)
+            arch_l.append(self.s_tag[i])
 
-        return model"""
-
+        return arch_l, 0
     def build_arch(self, arch_l):
         model = None
         if self.benchmark:
@@ -149,42 +147,51 @@ class Controller():
 
         return r
 
+
     def update_rnn(self, r, prob_list):
         loss = self.rnn.reinforce(prob_list, r)
 
         return loss
 
 
-    def iterate(self, predictor, epochs):
-        arch_l, prob_list = self.generate_arch()
+    def iterate(self, optimizer, predictor, epochs):
+        arch_l, prob_list = self.generate_arch(optimizer)
         model = self.build_arch(arch_l)
         r = self.evaluate_arch(model, predictor, epochs)
-
-        rnn_loss = self.update_rnn(r, prob_list)
+        if optimizer=="reinforce":
+            rnn_loss = self.update_rnn(r, prob_list)
+        else:
+            rnn_loss = False
 
         return arch_l,model,r,rnn_loss
 
-    def run(self, nb_iterations, predictor=None, seed=None, epochs=12):
+    def run(self, nb_iterations, predictor=None, seed=None, epochs=12, reset=False):
         if self.verbose:
             print("\tRunning =========================="
                   "\n\t   +--- # iterations: {:}"
                   "\n\t   +--- Predictor: {:}"
                   "\n\t   +--- seed: {:}"
-                  "\n\t   +--- EPOCH: {:}".format(nb_iterations, predictor, seed, epochs))
+                  "\n\t   +--- EPOCH: {:}"
+                  "\n\t   +--- Reset hidden state: {:}".format(nb_iterations, predictor, seed, epochs, reset))
+
+        if reset:
+            self.rnn.h = self.rnn.init_hidden()
 
         if seed is not None:
             torch.manual_seed(seed)
 
         self.loss_list = []
         self.acc_list = []
+
         best_model = None
         best_valid = 0
         best_iter = 0
 
         self.op_dist = self._init_dist_list()
+        start_time = time.time()
 
         for i in range(nb_iterations):
-            arch,model,r,rnn_loss = self.iterate(predictor,epochs)
+            arch,model,r,rnn_loss = self.iterate(self.optimizer, predictor,epochs)
             self._add_dist_layer(arch)
             self.acc_list.append(r)
             self.loss_list.append(rnn_loss)
@@ -197,7 +204,8 @@ class Controller():
                 best_valid = r
                 best_model = model
                 best_iter = i
-
+        end_time = time.time()
+        delta_time = end_time - start_time
         """if self.verbose:
             print(f"Number of iteration :{nb_iterations}")
             print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
@@ -211,7 +219,7 @@ class Controller():
         #self._show_dist()
 
         #return best_train, best_valid, best_test
-        return best_model, best_valid, best_iter
+        return best_model, best_valid, best_iter, delta_time
 
     def run_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
         self.best_train, self.best_valid, self.best_test = [], [], []
@@ -254,7 +262,7 @@ class Controller():
                 best_model = model
                 best_iter = i
 
-        if self.verbose:
+        """if self.verbose:
             print(f"Number of iteration :{nb_iterations}")
             print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
             info = self.api.get_more_info(best_model, self.dataset)
@@ -262,9 +270,9 @@ class Controller():
             print(f"Accuracy train: {best_train}")
             info = self.api.get_more_info(best_model, self.dataset)
             best_test = info['test-accuracy'] / 100
-            print(f"Accuracy test: {best_test}")
+            print(f"Accuracy test: {best_test}")"""
 
-        return best_train, best_valid, best_test
+        return best_model, best_valid, best_iter, delta_time
 
     def random_search_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
         self.best_train, self.best_valid, self.best_test = [], [], []

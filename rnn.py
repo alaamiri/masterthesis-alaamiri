@@ -43,7 +43,7 @@ class RNN(nn.Module):
         self.hidden_to_hyper = nn.Linear(hidden_size, self.output_size)
 
         self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
-        self.h = self._init_hidden()
+        self.h = self.init_hidden()
 
         self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
         #self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
@@ -133,7 +133,7 @@ class RNN(nn.Module):
         return self.loss.item()
 
 
-    def _init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
+    def init_hidden(self, r1=-0.8, r2=0.8) -> tuple:
         """
         Initialize the hidden states of the controller
 
