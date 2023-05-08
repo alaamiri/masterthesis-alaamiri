@@ -34,7 +34,7 @@ class Controller():
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
 
-        self.optimizer = rnn_fn
+        self.fn = rnn_fn
 
         self.dataset = dataset
         self.benchmark = benchmark
@@ -191,7 +191,7 @@ class Controller():
         start_time = time.time()
 
         for i in range(nb_iterations):
-            arch,model,r,rnn_loss = self.iterate(self.optimizer, predictor,epochs)
+            arch,model,r,rnn_loss = self.iterate(self.fn, predictor,epochs)
             self._add_dist_layer(arch)
             self.acc_list.append(r)
             self.loss_list.append(rnn_loss)

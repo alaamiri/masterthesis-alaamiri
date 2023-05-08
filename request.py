@@ -7,6 +7,7 @@
 from controller import Controller
 import numpy as np
 import plot
+import os
 
 OUT_DIR = "./out/"
 NB_NET = 200
@@ -29,6 +30,10 @@ def matrix_sum(matrix_list):
 
 
 def reinforce_nasbench(seeds, dataset):
+    path = OUT_DIR + "reinforce/nasbench/" + dataset
+    if not os.path.exists(path):
+        os.makedirs(path)
+
     c = Controller(s_space='nasbench',
                    rnn_fn='reinforce',
                    dataset=dataset,
@@ -60,7 +65,8 @@ def reinforce_nasbench(seeds, dataset):
 
     plot.dist_heatmap(sum_dist,
                       ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
-                      "Operations distribution with REINFORCE in NAS-Bench for 5 seeds")
+                      "Operations distribution with REINFORCE in NAS-Bench for 5 seeds",
+                      path)
 
 
 def random_nasbench(seeds, dataset):
@@ -154,6 +160,6 @@ if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
 
-    #reinforce_nasbench(seeds, 'cifar10')
+    reinforce_nasbench(seeds, 'cifar10')
     #random_nasbench(seeds, 'cifar10')
-    reinforce_nasbench_naswot(seeds,'cifar10')
+    #reinforce_nasbench_naswot(seeds,'cifar10')

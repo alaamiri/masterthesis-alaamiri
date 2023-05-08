@@ -123,3 +123,33 @@ class AvgPool1x1(nn.Module):
             x = self.conv(x)
             x = self.bn(x)
         return x
+
+class AvgPool3x3(nn.Module):
+    """
+    Implementation of Avergae Pooling with an optional
+    1x1 convolution afterwards. The convolution is required
+    to increase the number of channels if stride > 1.
+    """
+
+    def __init__(
+        self, kernel_size, stride, C_in=None, C_out=None, affine=True, **kwargs
+    ):
+        super(AvgPool1x1, self).__init__()
+        self.stride = stride
+        self.avgpool = nn.AvgPool2d(
+            3, stride=stride, padding=1, count_include_pad=False
+        )
+        if stride > 1:
+            assert C_in is not None and C_out is not None
+            self.affine = affine
+            self.C_in = C_in
+            self.C_out = C_out
+            self.conv = nn.Conv2d(C_in, C_out, 3, stride=1, padding=0, bias=False)
+            self.bn = nn.BatchNorm2d(C_out, affine=affine)
+
+    def forward(self, x):
+        x = self.avgpool(x)
+        if self.stride > 1:
+            x = self.conv(x)
+            x = self.bn(x)
+        return x
