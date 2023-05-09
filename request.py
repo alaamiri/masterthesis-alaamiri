@@ -28,17 +28,10 @@ def matrix_sum(matrix_list):
 
     return result
 
-
-def reinforce_nasbench(seeds, dataset):
-    path = OUT_DIR + "reinforce/nasbench/" + dataset
+def run_request(c, path, seeds):
     if not os.path.exists(path):
         os.makedirs(path)
 
-    c = Controller(s_space='nasbench',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
     l_model = []
     l_valid = []
     l_dist = []
@@ -57,16 +50,26 @@ def reinforce_nasbench(seeds, dataset):
               "\n Acc valid: {:>.3f}"
               "\n At iter: {:}"
               "\n Time: {:>.3f}".format(best_model, best_valid, best_iter, delta_time))
-
     avg_valid, std_valid, avg_time = np.average(l_valid), np.std(l_valid), np.average(l_time)
     print("avg: {:>.3f}, std: {:>.3f}, avg time: {:>.3f}".format(avg_valid, std_valid, avg_time))
-
     sum_dist = matrix_sum(l_dist) / len(l_dist)
-
     plot.dist_heatmap(sum_dist,
                       ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
                       "Operations distribution with REINFORCE in NAS-Bench for 5 seeds",
                       path)
+
+
+def reinforce_nasbench(seeds, dataset):
+    path = OUT_DIR + "reinforce/nasbench/" + dataset
+
+    c = Controller(s_space='nasbench',
+                   rnn_fn='reinforce',
+                   dataset=dataset,
+                   benchmark=True,
+                   verbose=True)
+
+    run_request(c, path, seeds)
+
 
 
 def random_nasbench(seeds, dataset):
