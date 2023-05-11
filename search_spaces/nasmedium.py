@@ -66,8 +66,14 @@ class NASMedium(AbsSS):
 
         return pp
 
-    """def forward(self,x):
-        return self.model(x)"""
+
+    def arch_to_str(self, operations):
+        return f'|{operations[0]}~0|+|{operations[1]}~0|{operations[2]}~1|'
+
+
+    def get_nasbench_unique(self, operations):
+        nas_bench_ark = f'|{operations[0]}~0|+|none~0|none~1|+|{operations[1]}~0|{operations[2]}~1|none~2|'
+
 
 if __name__ == '__main__':
     operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']

@@ -202,7 +202,7 @@ class Controller():
 
             if r > best_valid:
                 best_valid = r
-                best_model = model
+                best_model = arch #TODO
                 best_iter = i
         end_time = time.time()
         delta_time = end_time - start_time
@@ -291,6 +291,10 @@ class Controller():
             print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
 
         plot.plot_several_runs(nb_run, self.best_train, self.best_valid, self.best_test)
+
+
+    def arch_to_str(self,operations):
+        return self.search_space.arch_to_str(operations)
 
 
     def _init_ss(self, ss) -> dict:

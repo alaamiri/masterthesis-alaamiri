@@ -39,7 +39,7 @@ class NasBench(AbsSS):
         return network
 
     def get_arch_id(self, operations):
-        arch = '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*operations)
+        arch = self.arch_to_str(operations)
         model = self.api.query_index_by_arch(arch)
         return model
 
@@ -48,3 +48,6 @@ class NasBench(AbsSS):
         r = info['valid-accuracy'] / 100
 
         return r
+
+    def arch_to_str(self, operations):
+        return '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*operations)
