@@ -15,7 +15,7 @@ import plot
 import os
 
 OUT_DIR = "./out/"
-NB_NET = 20
+NB_NET = 200
 EPOCHS = 12
 
 
@@ -136,7 +136,7 @@ def reinforce_nasmedium(seeds, dataset):
     c = Controller(s_space='nasmedium',
                    rnn_fn='reinforce',
                    dataset=dataset,
-                   benchmark=False,
+                   benchmark=True,
                    verbose=True)
 
     run_request(c, path, models_path, dataset, None, fn, seeds)
@@ -171,4 +171,5 @@ if __name__ == '__main__':
     #reinforce_nasbench(seeds, 'cifar10')
     #random_nasbench(seeds, 'cifar10')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
-    reinforce_nasmedium(seeds, 'cifar10')
+    #reinforce_nasmedium(seeds, 'cifar10')
+    reinforce_nasmedium_naswot(seeds, 'cifar10')

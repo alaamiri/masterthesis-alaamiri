@@ -28,6 +28,7 @@ def ss_selector(ss_string, dataset):
         ss = nasmedium.NASMedium(N=nasmedium_arg[0],
                                  in_channels=nasmedium_arg[1],
                                  cell_channels=nasmedium_arg[2],
-                                 num_classes=nasmedium_arg[3])
+                                 num_classes=nasmedium_arg[3],
+                                 dataset=dataset)
 
     return ss

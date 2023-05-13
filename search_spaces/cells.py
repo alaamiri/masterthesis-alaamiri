@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from primitives import (ResNetBasicblock, ReLUConvBN, Identity, Zero, AvgPool1x1)
+from .primitives import (ResNetBasicblock, ReLUConvBN, Identity, Zero, AvgPool1x1)
 
 class CellFCDAG(nn.Module):
     def __init__(self, C, operations):

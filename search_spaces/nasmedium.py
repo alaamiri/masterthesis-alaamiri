@@ -1,22 +1,21 @@
 import torch
 from torch import nn
-from primitives import ResNetBasicblock
-from cells import CellFCDAG
+from .primitives import ResNetBasicblock
+from .cells import CellFCDAG
 from collections import OrderedDict
-from abs_searchspace import AbsSS
+from .abs_searchspace import AbsSS
 from nats_bench import create
 
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 
 class NASMedium(AbsSS):
-    def __init__(self, N, in_channels, cell_channels, num_classes = 10):
+    def __init__(self, N, in_channels, cell_channels, dataset, num_classes = 10):
         super(NASMedium, self).__init__()
         self.N = N
         self.in_channels = in_channels
         self.channels = cell_channels
         self.num_classes = num_classes
-        #self.model = self.set_model(in_channels, cell_channels, operations, N)
-
+        self.dataset = dataset
         self.OPERATIONS = ["none",
                            "skip_connect",
                            "nor_conv_1x1",
@@ -73,6 +72,18 @@ class NASMedium(AbsSS):
 
         return pp
 
+    def get_arch_id(self, operations):
+        unique_str = self.get_nasbench_unique(operations)
+        model = self.api.query_index_by_arch(unique_str)
+
+        return model
+
+
+    def get_score_from_api(self, model):
+        info = self.api.get_more_info(model, self.dataset + "-valid")
+        r = info['valid-accuracy'] / 100
+
+        return r
 
     def arch_to_str(self, operations):
         return f'|{operations[0]}~0|+|{operations[1]}~0|{operations[2]}~1|'
@@ -80,7 +91,6 @@ class NASMedium(AbsSS):
 
     def get_nasbench_unique(self, operations):
         nas_bench_arch = f'|{operations[0]}~0|+|none~0|none~1|+|{operations[1]}~0|{operations[2]}~1|none~2|'
-        print(nas_bench_arch)
         #unique_str = self.api.get_unique_str(nas_bench_arch)
 
         return nas_bench_arch
