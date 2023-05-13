@@ -1,10 +1,12 @@
 import torch
 from torch import nn
-from .primitives import ResNetBasicblock
-from .cells import CellFCDAG
+from primitives import ResNetBasicblock
+from cells import CellFCDAG
 from collections import OrderedDict
-from .abs_searchspace import AbsSS
+from abs_searchspace import AbsSS
+from nats_bench import create
 
+NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 
 class NASMedium(AbsSS):
     def __init__(self, N, in_channels, cell_channels, num_classes = 10):
@@ -15,13 +17,18 @@ class NASMedium(AbsSS):
         self.num_classes = num_classes
         #self.model = self.set_model(in_channels, cell_channels, operations, N)
 
-        self.OPERATIONS = ['identity',
-                           'zero',
-                           'conv_3x3',
-                           'conv_1x1',
-                           'avgpool_1x1']
+        self.OPERATIONS = ["none",
+                           "skip_connect",
+                           "nor_conv_1x1",
+                           "nor_conv_3x3",
+                           "avg_pool_3x3"]
+
         #Operations per cell
         self.NB_OPS = 3
+        self.api = create(NATS_BENCH_TSS_PATH,
+                          'tss',
+                          fast_mode=True,
+                          verbose=False)
 
     def get_model(self, operations):
         model = nn.Sequential(OrderedDict([
@@ -72,15 +79,27 @@ class NASMedium(AbsSS):
 
 
     def get_nasbench_unique(self, operations):
-        nas_bench_ark = f'|{operations[0]}~0|+|none~0|none~1|+|{operations[1]}~0|{operations[2]}~1|none~2|'
+        nas_bench_arch = f'|{operations[0]}~0|+|none~0|none~1|+|{operations[1]}~0|{operations[2]}~1|none~2|'
+        print(nas_bench_arch)
+        #unique_str = self.api.get_unique_str(nas_bench_arch)
+
+        return nas_bench_arch
 
 
 if __name__ == '__main__':
-    operations = ['identity', 'conv_3x3', 'avgpool_1x1', 'conv_3x3']
+    operations = ['skip_connect', 'nor_conv_3x3', 'avg_pool_3x3', 'nor_conv_3x3']
     cell_channels = [16, 32, 64]
     ss = NASMedium(3, 3, cell_channels)
     model = ss.get_model(operations)
+    print(ss.arch_to_str(operations))
+    unique_str = ss.get_nasbench_unique(operations)
+    print(unique_str)
+    id = ss.api.query_index_by_arch(unique_str)
+    print(id)
+    arch = ss.api.arch(id)
+    print(arch)
+    #ss.api.qu
 
-    x = torch.rand(1,3,64,64)
+    x = torch.rand(1, 3, 64, 64)
     y = model(x)
     print(y)
