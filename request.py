@@ -157,11 +157,31 @@ def reinforce_nasmedium_naswot(seeds, dataset):
 
 
 def reinforce_naslittle(seeds, dataset):
-    pass
+    fn = 'reinforce'
+    path = OUT_DIR + "reinforce/naslittle/" + dataset
+    models_path = path + '/seeds'
+
+    c = Controller(s_space='naslittle',
+                   rnn_fn='reinforce',
+                   dataset=dataset,
+                   benchmark=True,
+                   verbose=True)
+
+    run_request(c, path, models_path, dataset, None, fn, seeds)
 
 
 def reinforce_naslittle_naswot(seeds, dataset):
-    pass
+    fn = 'reinforce'
+    path = OUT_DIR + "reinforce/naslittle/naswot/" + dataset
+    models_path = path + '/seeds'
+
+    c = Controller(s_space='naslittle',
+                   rnn_fn='reinforce',
+                   dataset=dataset,
+                   benchmark=False,
+                   verbose=True)
+
+    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
 
 
 if __name__ == '__main__':
@@ -172,4 +192,6 @@ if __name__ == '__main__':
     #random_nasbench(seeds, 'cifar10')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
     #reinforce_nasmedium(seeds, 'cifar10')
-    reinforce_nasmedium_naswot(seeds, 'cifar10')
+    #reinforce_nasmedium_naswot(seeds, 'cifar10')
+    #reinforce_naslittle(seeds, 'cifar10')
+    reinforce_naslittle_naswot(seeds, 'cifar10')

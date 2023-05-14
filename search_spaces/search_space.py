@@ -1,4 +1,4 @@
-from search_spaces import nasmedium, nasbench
+from search_spaces import nasmedium, naslittle, nasbench
 
 ss_1 = [[3],               #FILTER_HEIGHT
         [3],               #FILTER_WIDTH,
@@ -26,6 +26,13 @@ def ss_selector(ss_string, dataset):
 
     elif ss_string == 'nasmedium':
         ss = nasmedium.NASMedium(N=nasmedium_arg[0],
+                                 in_channels=nasmedium_arg[1],
+                                 cell_channels=nasmedium_arg[2],
+                                 num_classes=nasmedium_arg[3],
+                                 dataset=dataset)
+
+    elif ss_string == 'naslittle':
+        ss = naslittle.NASLittle(N=nasmedium_arg[0],
                                  in_channels=nasmedium_arg[1],
                                  cell_channels=nasmedium_arg[2],
                                  num_classes=nasmedium_arg[3],

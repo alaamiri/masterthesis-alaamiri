@@ -42,7 +42,7 @@ class CellFCDAG(nn.Module):
 
 class CellDAG(nn.Module):
     def __init__(self, C, operations):
-        super(CellFCDAG, self).__init__()
+        super(CellDAG, self).__init__()
         self.set_model(C, operations)
         self.operations = operations
         #print(self.model)
@@ -50,11 +50,10 @@ class CellDAG(nn.Module):
     def set_model(self, C, operations):
         ops = [self.set_op(op, C) for op in operations]
         c = nn.Sequential(*ops)
-        #'|op_0~0|+|op_1~0|op_2~1|'
+        #'|op_0~0|+|op_1~1|+|op_2~2|'
         self.op_0 = self.set_op(operations[0], C)
         self.op_1 = self.set_op(operations[1], C)
         self.op_2 = self.set_op(operations[2], C)
-        self.op_3 = self.set_op(operations[3], C)
 
         return c
 
@@ -62,11 +61,11 @@ class CellDAG(nn.Module):
         return f'|{self.operations[0]}~0|+|{self.operations[1]}~1|+|{self.operations[2]}~2|'
 
     def set_op(self, op, C):
-        OPERATIONS = {'identity': Identity(),
-                      'zero': Zero(stride=1),
-                      'conv_3x3': ReLUConvBN(C, C, kernel_size=3, affine=False, track_running_stats=False),
-                      'conv_1x1': ReLUConvBN(C, C, kernel_size=1, affine=False, track_running_stats=False),
-                      'avgpool_1x1': AvgPool1x1(kernel_size=3, stride=1, affine=False)
+        OPERATIONS = {'skip_connect': Identity(),
+                      'none': Zero(stride=1),
+                      'nor_conv_3x3': ReLUConvBN(C, C, kernel_size=3, affine=False, track_running_stats=False),
+                      'nor_conv_1x1': ReLUConvBN(C, C, kernel_size=1, affine=False, track_running_stats=False),
+                      'avg_pool_3x3': AvgPool1x1(kernel_size=3, stride=1, affine=False)
                       }
         return OPERATIONS[op]
 
@@ -74,9 +73,8 @@ class CellDAG(nn.Module):
         out_0 = self.op_0(x)
         out_1 = self.op_1(out_0)
         out_2 = self.op_2(out_1)
-        out_3 = self.op_3(out_2)
 
-        return out_3
+        return out_2
 
 
 if __name__ == '__main__':
