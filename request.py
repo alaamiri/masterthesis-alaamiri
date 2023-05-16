@@ -15,7 +15,7 @@ import plot
 import os
 
 OUT_DIR = "./out/"
-NB_NET = 200
+NB_NET = 10
 EPOCHS = 12
 
 
@@ -74,7 +74,15 @@ def run_request(c, path, models_path, dataset, predictor, fn, seeds):
         print(best_str)
         write_model(models_path, seed, best_str)
     avg_valid, std_valid, avg_time = np.average(l_valid), np.std(l_valid), np.average(l_time)
-    print("avg: {:>.3f}, std: {:>.3f}, avg time: {:>.3f}".format(avg_valid, std_valid, avg_time))
+    best_of_best = l_model[l_valid.index(max(l_valid))]
+    print("***************** Sum *****************")
+    sum_str = "Best of best model:\n" \
+              " {:}\n" \
+              " avg: {:>.3f}\n" \
+              " std: {:>.3f}\n" \
+              " avg_time: {:>.3f}".format(c.arch_to_str(best_of_best),avg_valid, std_valid, avg_time)
+    print(sum_str)
+    write_model(path, 'summary', sum_str)
     sum_dist = matrix_sum(l_dist) / len(l_dist)
     plot.dist_heatmap(sum_dist,
                       ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
@@ -170,6 +178,20 @@ def random_nasmedium(seeds, dataset):
     run_request(c, path, models_path, dataset, None, fn, seeds)
 
 
+def random_nasmedium_naswot(seeds, dataset):
+    fn = 'randomsearch'
+    path = OUT_DIR + "randomsearch/nasmedium/naswot/" + dataset
+    models_path = path + '/seeds'
+
+    c = Controller(s_space='nasmedium',
+                   rnn_fn='randomsearch',
+                   dataset=dataset,
+                   benchmark=False,
+                   verbose=True)
+
+    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
+
+
 def reinforce_nasmedium_naswot(seeds, dataset):
     fn = 'reinforce'
     path = OUT_DIR + "reinforce/nasmedium/naswot/" + dataset
@@ -212,18 +234,49 @@ def reinforce_naslittle_naswot(seeds, dataset):
     run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
 
 
+def random_naslittle(seeds, dataset):
+    fn = 'randomsearch'
+    path = OUT_DIR + "randomsearch/naslittle/" + dataset
+    models_path = path + '/seeds'
+
+    c = Controller(s_space='naslittle',
+                   rnn_fn='randomsearch',
+                   dataset=dataset,
+                   benchmark=True,
+                   verbose=True)
+
+    run_request(c, path, models_path, dataset, None, fn, seeds)
+
+
+def random_naslittle_naswot(seeds, dataset):
+    fn = 'randomsearch'
+    path = OUT_DIR + "randomsearch/naslittle/naswot/" + dataset
+    models_path = path + '/seeds'
+
+    c = Controller(s_space='naslittle',
+                   rnn_fn='randomsearch',
+                   dataset=dataset,
+                   benchmark=False,
+                   verbose=True)
+
+    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
+
+
 if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
 
-    #reinforce_nasbench(seeds, 'cifar10')
-    #random_nasbench(seeds, 'cifar10')
-    random_nasbench_naswot(seeds, 'cifar10')
+    reinforce_nasbench(seeds, 'cifar10')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
+    #random_nasbench(seeds, 'cifar10')
+    #random_nasbench_naswot(seeds, 'cifar10')
 
     #reinforce_nasmedium(seeds, 'cifar10')
-    #random_nasmedium(seeds, 'cifar10')
     #reinforce_nasmedium_naswot(seeds, 'cifar10')
+    #random_nasmedium(seeds, 'cifar10')
+    #random_nasmedium_naswot(seeds, 'cifar10')
 
     #reinforce_naslittle(seeds, 'cifar10')
     #reinforce_naslittle_naswot(seeds, 'cifar10')
+    #random_naslittle(seeds, 'cifar10')
+    #random_naslittle_naswot(seeds, 'cifar10')
