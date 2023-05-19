@@ -1,8 +1,3 @@
-import torch
-from torch import nn
-from .primitives import ResNetBasicblock
-from .cells import CellFCDAG
-from collections import OrderedDict
 from .abs_searchspace import AbsSS
 from nats_bench import create
 import xautodl  # import this lib -- "https://github.com/D-X-Y/AutoDL-Projects", you can use pip install xautodl

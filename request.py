@@ -44,7 +44,15 @@ def write_model(models_path, seed, model_str):
         f.write('\n')
 
 
-def run_request(c, path, models_path, dataset, predictor, fn, seeds):
+def read_model(model_path):
+    with open(model_path, 'r') as file:
+        lines = file.readlines()
+        second_line = lines[1].strip()
+
+    return second_line
+
+
+def run_request(c, path, models_path, dataset, search_space, predictor, fn, seeds):
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -55,16 +63,22 @@ def run_request(c, path, models_path, dataset, predictor, fn, seeds):
     l_valid = []
     l_dist = []
     l_time = []
+
+    all_valids = []
     for seed in seeds:
-        best_model, best_valid, best_iter, delta_time = c.run(nb_iterations=NB_NET,
+        models, valids, iters, delta_time = c.run(nb_iterations=NB_NET,
                                                               predictor=predictor,
                                                               seed=seed,
                                                               epochs=EPOCHS,
                                                               reset=True)
+        best_id = models.index(max(models))
+        best_model, best_valid, best_iter = models[best_id], valids[best_id], iters[best_id]
+        all_valids += valids
         l_model.append(best_model)
         l_valid.append(best_valid)
         l_dist.append(c.op_dist)
         l_time.append(delta_time)
+        print(best_model)
         best_str = "Best model:\n " \
                    "{:}" \
                    "\n Acc valid: {:>.3f}" \
@@ -84,14 +98,32 @@ def run_request(c, path, models_path, dataset, predictor, fn, seeds):
     print(sum_str)
     write_model(path, 'summary', sum_str)
     sum_dist = matrix_sum(l_dist) / len(l_dist)
+    print(read_model(path+"/summary.txt"))
     plot.dist_heatmap(sum_dist,
                       ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
                       path,
                       dataset=dataset,
                       nb_seeds=len(seeds),
+                      search_space=search_space,
                       fn=fn)
 
+    return all_valids
 # ======================================================================================================================
+def run(s_space, fn, dataset, predictor, benchmark):
+    if predictor is None:
+        path = f"{OUT_DIR}{fn}/{s_space}/{dataset}"
+    else:
+        path = f"{OUT_DIR}{fn}/{s_space}/{predictor}/{dataset}"
+
+    models_path = path+'/seeds'
+
+    c = Controller(s_space=s_space,
+                   rnn_fn=fn,
+                   dataset=dataset,
+                   benchmark=benchmark,
+                   verbose=True)
+
+    return run_request(c, path, models_path, dataset, s_space, predictor, fn, seeds)
 
 
 def reinforce_nasbench(seeds, dataset):
@@ -266,17 +298,31 @@ if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
 
-    reinforce_nasbench(seeds, 'cifar10')
+    #reinforce_nasbench(seeds, 'cifar10')
+    data1 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_nasbench_naswot(seeds, 'cifar10')
+    run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasbench(seeds, 'cifar10')
+    data2 = run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_nasbench_naswot(seeds, 'cifar10')
+    run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
+    plot.box_plot([data1, data2], ['reinforce', 'randomsearch'], None, "test")
+    input()
     #reinforce_nasmedium(seeds, 'cifar10')
+    run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_nasmedium_naswot(seeds, 'cifar10')
+    run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasmedium(seeds, 'cifar10')
+    run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_nasmedium_naswot(seeds, 'cifar10')
+    run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
     #reinforce_naslittle(seeds, 'cifar10')
+    run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_naslittle_naswot(seeds, 'cifar10')
+    run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_naslittle(seeds, 'cifar10')
+    run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_naslittle_naswot(seeds, 'cifar10')
+    run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)

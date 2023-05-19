@@ -45,13 +45,19 @@ def plot_several_runs(nb_run, train_l, valid_l, test_l):
     plt.legend(["Train", "Validation", "Test"])
     plt.show()
 
-def dist_heatmap(dist_mat, op, path, fn, dataset, nb_seeds):
+def dist_heatmap(dist_mat, op, path, fn, dataset, search_space, nb_seeds):
     sns.set()
     yticks = [f"op{i}" for i in range(len(dist_mat))]
     ax = sns.heatmap(dist_mat, xticklabels=op, yticklabels=yticks, cmap='magma')
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, ha="right")
-    title = f"Operations distribution with {fn} in {dataset} for {nb_seeds} seed(s)"
+    title = f"Operations distribution on {search_space} with {fn} in {dataset} for {nb_seeds} seed(s)"
     plt.title(title)
     plt.savefig(path+"/dist_heatmap"+".png")
+    plt.show()
+
+def box_plot(data, xticks, path, title):
+    ax = plt.boxplot(data)
+    plt.ylabel("acc")
+    plt.title(title)
     plt.show()

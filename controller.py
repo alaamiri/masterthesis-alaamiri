@@ -180,21 +180,25 @@ class Controller():
         if seed is not None:
             torch.manual_seed(seed)
 
-        self.loss_list = []
-        self.acc_list = []
-
         best_model = None
         best_valid = 0
         best_iter = 0
+
+        l_models = []
+        l_valid = []
+        l_iter = []
 
         self.op_dist = self._init_dist_list()
         start_time = time.time()
 
         for i in range(nb_iterations):
             arch,model,r,rnn_loss = self.iterate(self.fn, predictor,epochs)
+
             self._add_dist_layer(arch)
-            self.acc_list.append(r)
-            self.loss_list.append(rnn_loss)
+
+            l_models.append(arch)
+            l_valid.append(r)
+            l_iter.append(i)
 
             if self.verbose:
                 if i % (nb_iterations//5) == 0:
@@ -204,22 +208,12 @@ class Controller():
                 best_valid = r
                 best_model = arch #TODO
                 best_iter = i
+
         end_time = time.time()
         delta_time = end_time - start_time
-        """if self.verbose:
-            print(f"Number of iteration :{nb_iterations}")
-            print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
-            info = self.api.get_more_info(best_model, self.dataset)
-            best_train = info['train-accuracy'] / 100
-            print(f"Accuracy train: {best_train}")
-            info = self.api.get_more_info(best_model, self.dataset)
-            best_test = info['test-accuracy'] / 100
-            print(f"Accuracy test: {best_test}")"""
-        #dist = self._get_dist_layers()
-        #self._show_dist()
 
-        #return best_train, best_valid, best_test
-        return best_model, best_valid, best_iter, delta_time
+        #return best_model, best_valid, best_iter, delta_time
+        return  l_models, l_valid, l_iter, delta_time
 
     def run_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
         self.best_train, self.best_valid, self.best_test = [], [], []
@@ -237,61 +231,6 @@ class Controller():
             print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
 
         plot.plot_several_runs(nb_run,self.best_train, self.best_valid, self.best_test)
-
-    def random_search(self, nb_iterations, nb_layer, predictor=None, epochs=12):
-        print("Random Search")
-        self.loss_list = []
-        self.acc_list = []
-        best_model = None
-        best_valid = 0
-        best_iter = 0
-        for i in range(nb_iterations):
-            if self.benchmark:
-                size = len(self.api)
-                model = random.randint(0,size)
-                r, rnn_loss = self.evaluate_arch(model,predictor,epochs), 0
-                self.acc_list.append(r)
-                self.loss_list.append(rnn_loss)
-
-                if self.verbose:
-                    if i % 500 == 0:
-                        print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
-
-            if r > best_valid:
-                best_valid = r
-                best_model = model
-                best_iter = i
-
-        """if self.verbose:
-            print(f"Number of iteration :{nb_iterations}")
-            print(f"Best model : {best_model}\nAccuracy valid: {best_valid*100}")
-            info = self.api.get_more_info(best_model, self.dataset)
-            best_train = info['train-accuracy'] / 100
-            print(f"Accuracy train: {best_train}")
-            info = self.api.get_more_info(best_model, self.dataset)
-            best_test = info['test-accuracy'] / 100
-            print(f"Accuracy test: {best_test}")"""
-
-        return best_model, best_valid, best_iter, delta_time
-
-    def random_search_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
-        self.best_train, self.best_valid, self.best_test = [], [], []
-        for i in range(nb_run):
-            if self.verbose:
-                print(f"Run n#{i}")
-                best_train, best_valid, best_test = self.random_search(
-                    nb_iterations, nb_layer, predictor=None, epochs=12)
-                self.best_train.append(best_train)
-                self.best_valid.append(best_valid)
-                self.best_test.append(best_test)
-
-        if self.verbose:
-            print(f"Mean of best train acc: {np.average(self.best_train)}+-{np.std(self.best_train)}")
-            print(f"Mean of best valid acc: {np.average(self.best_valid)}+-{np.std(self.best_valid)}")
-            print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
-
-        plot.plot_several_runs(nb_run, self.best_train, self.best_valid, self.best_test)
-
 
     def arch_to_str(self,operations):
         return self.search_space.arch_to_str(operations)
