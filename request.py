@@ -15,7 +15,7 @@ import plot
 import os
 
 OUT_DIR = "./out/"
-NB_NET = 10
+NB_NET = 500
 EPOCHS = 12
 
 
@@ -65,6 +65,7 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
     l_time = []
 
     all_valids = []
+
     for seed in seeds:
         models, valids, iters, delta_time = c.run(nb_iterations=NB_NET,
                                                               predictor=predictor,
@@ -96,6 +97,7 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
               " std: {:>.3f}\n" \
               " avg_time: {:>.3f}".format(c.arch_to_str(best_of_best),avg_valid, std_valid, avg_time)
     print(sum_str)
+    print("***************************************")
     write_model(path, 'summary', sum_str)
     sum_dist = matrix_sum(l_dist) / len(l_dist)
     print(read_model(path+"/summary.txt"))
@@ -298,31 +300,44 @@ if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
 
+
     #reinforce_nasbench(seeds, 'cifar10')
     data1 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
-    #reinforce_nasbench_naswot(seeds, 'cifar10')
-    run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
-    #random_nasbench(seeds, 'cifar10')
-    data2 = run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
-    #random_nasbench_naswot(seeds, 'cifar10')
-    run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
-
-    plot.box_plot([data1, data2], ['reinforce', 'randomsearch'], None, "test")
+    plot.box_plot([data1], ['nasbench'], OUT_DIR,
+                  "Distribution of severals space searchs with reinforce", fn='reinforce')
     input()
+    #reinforce_nasbench_naswot(seeds, 'cifar10')
+    #run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
+    #random_nasbench(seeds, 'cifar10')
+    data4 = run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    #random_nasbench_naswot(seeds, 'cifar10')
+    #run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
+
+
+
     #reinforce_nasmedium(seeds, 'cifar10')
-    run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    data2 = run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_nasmedium_naswot(seeds, 'cifar10')
-    run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
+    #run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasmedium(seeds, 'cifar10')
-    run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    data5 = run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_nasmedium_naswot(seeds, 'cifar10')
-    run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
+    #run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
     #reinforce_naslittle(seeds, 'cifar10')
-    run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    data3 = run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_naslittle_naswot(seeds, 'cifar10')
-    run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
+    #run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_naslittle(seeds, 'cifar10')
-    run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    data6 = run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_naslittle_naswot(seeds, 'cifar10')
-    run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
+    #run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
+
+    data7 = run(s_space='nasbig', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    data8 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+
+    plot.box_plot([data1, data7, data2, data3], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+                  "Distribution of severals space searchs with reinforce", fn='reinforce')
+    print('ok')
+    plot.box_plot([data4, data8, data5, data6], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+                  "Distribution of severals space searchs with random search", fn='randomsearch')

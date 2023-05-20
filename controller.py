@@ -215,23 +215,6 @@ class Controller():
         #return best_model, best_valid, best_iter, delta_time
         return  l_models, l_valid, l_iter, delta_time
 
-    def run_several(self, nb_run, nb_iterations, nb_layer, predictor=None, epochs=12):
-        self.best_train, self.best_valid, self.best_test = [], [], []
-        for i in range(nb_run):
-            if self.verbose:
-                print(f"Run n#{i}")
-                best_train, best_valid, best_test = self.run(nb_iterations, nb_layer, predictor=None, epochs=12)
-                self.best_train.append(best_train)
-                self.best_valid.append(best_valid)
-                self.best_test.append(best_test)
-
-        if self.verbose:
-            print(f"Mean of best train acc: {np.average(self.best_train)}+-{np.std(self.best_train)}")
-            print(f"Mean of best valid acc: {np.average(self.best_valid)}+-{np.std(self.best_valid)}")
-            print(f"Mean of best test acc: {np.average(self.best_test)}+-{np.std(self.best_test)}")
-
-        plot.plot_several_runs(nb_run,self.best_train, self.best_valid, self.best_test)
-
     def arch_to_str(self,operations):
         return self.search_space.arch_to_str(operations)
 
@@ -333,9 +316,10 @@ class Controller():
     def get_bench_best(self):
         print('There are {:} architectures on the topology search space'.format(len(self.api)))
 
-        best_arch_index, highest_valid_accuracy = self.api.find_best(dataset='cifar10', metric_on_set='ori-test', hp='12')
+        best_arch_index, highest_valid_accuracy = self.api.find_best(dataset='cifar10', metric_on_set='ori-tes', hp='12')
         print(best_arch_index,highest_valid_accuracy)
         #13714 84.89199999023438 cifar10-valid x-valid
+
 if __name__ == '__main__':
     nb_net = 200
     nb_layers = 7

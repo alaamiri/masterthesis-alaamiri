@@ -56,8 +56,11 @@ def dist_heatmap(dist_mat, op, path, fn, dataset, search_space, nb_seeds):
     plt.savefig(path+"/dist_heatmap"+".png")
     plt.show()
 
-def box_plot(data, xticks, path, title):
+def box_plot(data, xticks, path, title, fn):
     ax = plt.boxplot(data)
     plt.ylabel("acc")
     plt.title(title)
+    plt.xticks([i+1 for i in range(len(xticks))], xticks)
+    plt.savefig(path+f"boxplot_{fn}.png")
+
     plt.show()

@@ -123,7 +123,8 @@ class RNN(nn.Module):
         #print("prev_ema ", self.prev_ema)
         self.curr_ema = self.ema(reward, self.prev_ema)
         #print("curr_ema ", self.ema(reward, self.prev_ema))
-        val = torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_()
+        #val = torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_()
+        val = torch.sum(torch.log(prob) * reward).requires_grad_() / len(prob)
         self.loss = -val
         #print("loss ", self.loss)
 
