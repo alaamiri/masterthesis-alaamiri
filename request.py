@@ -69,33 +69,34 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
     for seed in seeds:
         models, valids, iters, delta_time = c.run(nb_iterations=NB_NET,
                                                               predictor=predictor,
-                                                              seed=seed,
+                                                              seed=None,
                                                               epochs=EPOCHS,
                                                               reset=True)
-        best_id = models.index(max(models))
+        best_id = valids.index(max(valids))
         best_model, best_valid, best_iter = models[best_id], valids[best_id], iters[best_id]
-        all_valids += valids
+        all_valids.append(valids)
         l_model.append(best_model)
         l_valid.append(best_valid)
         l_dist.append(c.op_dist)
         l_time.append(delta_time)
-        print(best_model)
         best_str = "Best model:\n " \
                    "{:}" \
                    "\n Acc valid: {:>.3f}" \
                    "\n At iter: {:}" \
                    "\n Time: {:>.3f}".format(c.arch_to_str(best_model), best_valid, best_iter, delta_time)
 
-        print(best_str)
         write_model(models_path, seed, best_str)
+        print(best_str)
     avg_valid, std_valid, avg_time = np.average(l_valid), np.std(l_valid), np.average(l_time)
-    best_of_best = l_model[l_valid.index(max(l_valid))]
+    best_valid = max(l_valid)
+    best_of_best = l_model[l_valid.index(best_valid)]
     print("***************** Sum *****************")
     sum_str = "Best of best model:\n" \
               " {:}\n" \
+              " acc best: {:>.3f}\n" \
               " avg: {:>.3f}\n" \
               " std: {:>.3f}\n" \
-              " avg_time: {:>.3f}".format(c.arch_to_str(best_of_best),avg_valid, std_valid, avg_time)
+              " avg_time: {:>.3f}".format(c.arch_to_str(best_of_best),best_valid, avg_valid, std_valid, avg_time)
     print(sum_str)
     print("***************************************")
     write_model(path, 'summary', sum_str)

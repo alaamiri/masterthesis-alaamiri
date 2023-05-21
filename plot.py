@@ -57,7 +57,10 @@ def dist_heatmap(dist_mat, op, path, fn, dataset, search_space, nb_seeds):
     plt.show()
 
 def box_plot(data, xticks, path, title, fn):
+    print(data)
     ax = plt.boxplot(data)
+    for d in data:
+        print(max(d))
     plt.ylabel("acc")
     plt.title(title)
     plt.xticks([i+1 for i in range(len(xticks))], xticks)

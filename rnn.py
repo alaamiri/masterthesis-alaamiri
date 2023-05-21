@@ -13,15 +13,6 @@ EPOCHS = 5
 
 # 1097.6585461702298
 # Accuracy: 78.0%, Avg loss: 0.649093
-"""
-[[82768608. 57117771. 56746112. ... 57496766. 56501693. 56924064.]
- [57117771. 82768608. 56708583. ... 56745599. 56432870. 56861305.]
- [56746112. 56708583. 82768608. ... 56614470. 56420361. 56639482.]
- ...
- [57496766. 56745599. 56614470. ... 82768608. 56553243. 57011024.]
- [56501693. 56432870. 56420361. ... 56553243. 82768608. 57076075.]
- [56924064. 56861305. 56639482. ... 57011024. 57076075. 82768608.]]
-"""
 
 class RNN(nn.Module):
     """
@@ -45,7 +36,7 @@ class RNN(nn.Module):
         self.x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
         self.h = self.init_hidden()
 
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.lstm.parameters(), lr=1e-2)
         #self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
 
         self.prev_ema = -1
@@ -123,12 +114,17 @@ class RNN(nn.Module):
         #print("prev_ema ", self.prev_ema)
         self.curr_ema = self.ema(reward, self.prev_ema)
         #print("curr_ema ", self.ema(reward, self.prev_ema))
-        #val = torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_()
-        val = torch.sum(torch.log(prob) * reward).requires_grad_() / len(prob)
+        val = torch.sum(torch.log(prob) * (reward-self.curr_ema)).requires_grad_()
+        #val = torch.sum(torch.log(prob) * reward).requires_grad_() / len(prob)
         self.loss = -val
         #print("loss ", self.loss)
 
         self.prev_ema = self.curr_ema
+
+        self.optimizer.zero_grad()
+        self.loss.backward()
+
+        self.optimizer.step()
         #input()
 
         return self.loss.item()

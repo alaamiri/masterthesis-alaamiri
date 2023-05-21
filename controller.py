@@ -180,10 +180,6 @@ class Controller():
         if seed is not None:
             torch.manual_seed(seed)
 
-        best_model = None
-        best_valid = 0
-        best_iter = 0
-
         l_models = []
         l_valid = []
         l_iter = []
@@ -204,10 +200,6 @@ class Controller():
                 if i % (nb_iterations//5) == 0:
                     print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
 
-            if r > best_valid:
-                best_valid = r
-                best_model = arch #TODO
-                best_iter = i
 
         end_time = time.time()
         delta_time = end_time - start_time
