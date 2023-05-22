@@ -57,13 +57,17 @@ def dist_heatmap(dist_mat, op, path, fn, dataset, search_space, nb_seeds):
     plt.show()
 
 def box_plot(data, xticks, path, title, fn):
-    print(data)
-    ax = plt.boxplot(data)
-    for d in data:
-        print(max(d))
+    data = np.array(data)
+    data = data.reshape(len(data), -1)
+    ax = plt.boxplot(np.transpose(data))
     plt.ylabel("acc")
     plt.title(title)
     plt.xticks([i+1 for i in range(len(xticks))], xticks)
     plt.savefig(path+f"boxplot_{fn}.png")
 
+    plt.show()
+
+def bar_plot(data, xticks, path, title, fn):
+    print(data)
+    plt.bar(xticks, np.average(data))
     plt.show()

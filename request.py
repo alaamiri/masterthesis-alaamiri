@@ -8,16 +8,16 @@
 # Fix les seeds qui semblent ne pas bien s'appliquer
 # (Box plot des réseaux sélectionnés afin de visualiser la performance de REINFORCE sur tout les espaces de recherches)
 # A la toute fin, tableau récapitulatif concernant les performances des différents réseaux sur les différents espaces de recherche
-
+from nats_bench import create
 from controller import Controller
 import numpy as np
 import plot
 import os
-
+NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 500
+NB_NET = 50
 EPOCHS = 12
-
+api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
 def matrix_sum(matrix_list):
     # chat-gpt
@@ -64,6 +64,7 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
     l_dist = []
     l_time = []
 
+    all_models = []
     all_valids = []
 
     for seed in seeds:
@@ -74,7 +75,10 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
                                                               reset=True)
         best_id = valids.index(max(valids))
         best_model, best_valid, best_iter = models[best_id], valids[best_id], iters[best_id]
+
         all_valids.append(valids)
+        all_models.append([api.query_index_by_arch(c.arch_to_str(model)) for model in models])
+
         l_model.append(best_model)
         l_valid.append(best_valid)
         l_dist.append(c.op_dist)
@@ -87,6 +91,7 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
 
         write_model(models_path, seed, best_str)
         print(best_str)
+
     avg_valid, std_valid, avg_time = np.average(l_valid), np.std(l_valid), np.average(l_time)
     best_valid = max(l_valid)
     best_of_best = l_model[l_valid.index(best_valid)]
@@ -102,15 +107,15 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
     write_model(path, 'summary', sum_str)
     sum_dist = matrix_sum(l_dist) / len(l_dist)
     print(read_model(path+"/summary.txt"))
-    plot.dist_heatmap(sum_dist,
+    """plot.dist_heatmap(sum_dist,
                       ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
                       path,
                       dataset=dataset,
                       nb_seeds=len(seeds),
                       search_space=search_space,
-                      fn=fn)
+                      fn=fn)"""
 
-    return all_valids
+    return all_models, all_valids
 # ======================================================================================================================
 def run(s_space, fn, dataset, predictor, benchmark):
     if predictor is None:
@@ -129,173 +134,12 @@ def run(s_space, fn, dataset, predictor, benchmark):
     return run_request(c, path, models_path, dataset, s_space, predictor, fn, seeds)
 
 
-def reinforce_nasbench(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/nasbench/" + dataset
-    models_path = path+'/seeds'
+def get_info(models, type, dataset):
+    data = np.array(models)
+    data = data.reshape(-1)
+    stat = [api.get_cost_info(model, dataset)[type] for model in data]
 
-    c = Controller(s_space='nasbench',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def random_nasbench(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/nasbench/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasbench',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def reinforce_nasbench_naswot(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/nasbench/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasbench',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
-
-def random_nasbench_naswot(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/nasbench/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasbench',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
-
-def reinforce_nasmedium(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/nasmedium/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasmedium',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def random_nasmedium(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/nasmedium/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasmedium',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def random_nasmedium_naswot(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/nasmedium/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasmedium',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
-
-def reinforce_nasmedium_naswot(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/nasmedium/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='nasmedium',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
-
-def reinforce_naslittle(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/naslittle/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='naslittle',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def reinforce_naslittle_naswot(seeds, dataset):
-    fn = 'reinforce'
-    path = OUT_DIR + "reinforce/naslittle/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='naslittle',
-                   rnn_fn='reinforce',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
-
-def random_naslittle(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/naslittle/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='naslittle',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=True,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, None, fn, seeds)
-
-
-def random_naslittle_naswot(seeds, dataset):
-    fn = 'randomsearch'
-    path = OUT_DIR + "randomsearch/naslittle/naswot/" + dataset
-    models_path = path + '/seeds'
-
-    c = Controller(s_space='naslittle',
-                   rnn_fn='randomsearch',
-                   dataset=dataset,
-                   benchmark=False,
-                   verbose=True)
-
-    run_request(c, path, models_path, dataset, 'naswot', fn, seeds)
-
+    return stat
 
 if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
@@ -303,42 +147,43 @@ if __name__ == '__main__':
 
 
     #reinforce_nasbench(seeds, 'cifar10')
-    data1 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
-    plot.box_plot([data1], ['nasbench'], OUT_DIR,
-                  "Distribution of severals space searchs with reinforce", fn='reinforce')
+    reinforce_bench_c10 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    params = get_info(reinforce_bench_c10[0], "params", "cifar10")
+    plot.bar_plot(params, ["reinforce"], OUT_DIR, "Wsh la cité", "reinforce")
     input()
+    #plot.box_plot([reinforce_bench_c10], ['nasbench'], OUT_DIR,
+                  #"Distribution of severals space searchs with reinforce", fn='reinforce')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
     #run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasbench(seeds, 'cifar10')
-    data4 = run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    random_bench_c10 = run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_nasbench_naswot(seeds, 'cifar10')
     #run(s_space='nasbench', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
 
 
     #reinforce_nasmedium(seeds, 'cifar10')
-    data2 = run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    reinforce_medium_c10 = run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_nasmedium_naswot(seeds, 'cifar10')
     #run(s_space='nasmedium', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasmedium(seeds, 'cifar10')
-    data5 = run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    random_medium_c10 = run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_nasmedium_naswot(seeds, 'cifar10')
     #run(s_space='nasmedium', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
     #reinforce_naslittle(seeds, 'cifar10')
-    data3 = run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    reinforce_little_c10 = run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #reinforce_naslittle_naswot(seeds, 'cifar10')
     #run(s_space='naslittle', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_naslittle(seeds, 'cifar10')
-    data6 = run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    random_little_c10 = run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
     #random_naslittle_naswot(seeds, 'cifar10')
     #run(s_space='naslittle', fn='randomsearch', dataset='cifar10', predictor='naswot', benchmark=False)
 
-    data7 = run(s_space='nasbig', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
-    data8 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
+    reinforce_big_c10 = run(s_space='nasbig', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
+    random_big_c10 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
 
-    plot.box_plot([data1, data7, data2, data3], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+    plot.box_plot([reinforce_bench_c10, reinforce_big_c10, reinforce_medium_c10, reinforce_little_c10], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with reinforce", fn='reinforce')
-    print('ok')
-    plot.box_plot([data4, data8, data5, data6], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+    plot.box_plot([random_bench_c10, random_big_c10, random_medium_c10, random_little_c10], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with random search", fn='randomsearch')
