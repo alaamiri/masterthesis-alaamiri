@@ -148,9 +148,6 @@ if __name__ == '__main__':
 
     #reinforce_nasbench(seeds, 'cifar10')
     reinforce_bench_c10 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
-    params = get_info(reinforce_bench_c10[0], "params", "cifar10")
-    plot.bar_plot(params, ["reinforce"], OUT_DIR, "Wsh la cité", "reinforce")
-    input()
     #plot.box_plot([reinforce_bench_c10], ['nasbench'], OUT_DIR,
                   #"Distribution of severals space searchs with reinforce", fn='reinforce')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
@@ -183,7 +180,9 @@ if __name__ == '__main__':
     reinforce_big_c10 = run(s_space='nasbig', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     random_big_c10 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
 
-    plot.box_plot([reinforce_bench_c10, reinforce_big_c10, reinforce_medium_c10, reinforce_little_c10], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+    p = [get_info(data[0], "params", "cifar10") for data in [reinforce_bench_c10, reinforce_medium_c10, reinforce_big_c10, reinforce_little_c10]]
+    plot.bar_plot(p, ["bench", "medium","big", "little"], OUT_DIR, "Wsh la cité", "reinforce")
+    plot.box_plot([reinforce_bench_c10[1], reinforce_big_c10[1], reinforce_medium_c10[1], reinforce_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with reinforce", fn='reinforce')
-    plot.box_plot([random_bench_c10, random_big_c10, random_medium_c10, random_little_c10], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+    plot.box_plot([random_bench_c10[1], random_big_c10[1], random_medium_c10[1], random_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with random search", fn='randomsearch')

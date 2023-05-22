@@ -68,6 +68,5 @@ def box_plot(data, xticks, path, title, fn):
     plt.show()
 
 def bar_plot(data, xticks, path, title, fn):
-    print(data)
-    plt.bar(xticks, np.average(data))
+    plt.bar(xticks, [np.average(d) for d in data])
     plt.show()
