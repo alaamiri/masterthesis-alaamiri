@@ -59,3 +59,6 @@ class NasBench(AbsSS):
 
     def arch_to_str(self, operations):
         return '|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|'.format(*operations)
+
+    def get_nasbench_unique(self, operations):
+        return self.arch_to_str(operations)

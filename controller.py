@@ -208,7 +208,7 @@ class Controller():
         return  l_models, l_valid, l_iter, delta_time
 
     def arch_to_str(self,operations):
-        return self.search_space.arch_to_str(operations)
+        return self.search_space.get_nasbench_unique(operations)
 
 
     def _init_ss(self, ss) -> dict:
