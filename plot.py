@@ -67,8 +67,9 @@ def box_plot(data, xticks, path, title, fn):
 
     plt.show()
 
-def bar_plot(data, xticks, path, title, fn):
+def bar_plot(data, xticks, path, title, fn, dataset):
     print([np.average(d) for d in data])
     print([np.std(d) for d in data])
-    plt.bar(xticks, [np.average(d) for d in data])
+    plt.bar(xticks, [np.average(d) for d in data], color='r')
+    plt.title(f"Average of {title} with {fn} in {dataset}")
     plt.show()

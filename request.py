@@ -15,7 +15,7 @@ import plot
 import os
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 20
+NB_NET = 500
 EPOCHS = 12
 api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
@@ -149,7 +149,6 @@ if __name__ == '__main__':
 
     #reinforce_nasbench(seeds, 'cifar10')
     reinforce_bench_c10 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
-    print(reinforce_bench_c10[0])
     #plot.box_plot([reinforce_bench_c10], ['nasbench'], OUT_DIR,
                   #"Distribution of severals space searchs with reinforce", fn='reinforce')
     #reinforce_nasbench_naswot(seeds, 'cifar10')
@@ -183,8 +182,9 @@ if __name__ == '__main__':
     #random_big_c10 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
 
     #{'flops', 'params''latency', 'T-train@epoch', 'T-train@total', 'T-ori-test@epoch', 'T-ori-test@total'}
+    params = "params"
     p = [get_info(data[0], "params", "cifar10") for data in [reinforce_bench_c10, reinforce_big_c10, reinforce_medium_c10, reinforce_little_c10]]
-    plot.bar_plot(p, ["bench", "big", "medium", "little"], OUT_DIR, "Wsh la cité", "reinforce")
+    plot.bar_plot(p, ["bench", "big", "medium", "little"], OUT_DIR, params, "reinforce", "cifar10")
     """plot.box_plot([reinforce_bench_c10[1], reinforce_big_c10[1], reinforce_medium_c10[1], reinforce_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with reinforce", fn='reinforce')
     plot.box_plot([random_bench_c10[1], random_big_c10[1], random_medium_c10[1], random_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
