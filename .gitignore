@@ -1,2 +1,8 @@
 /data/
 /nats_bench_data/NATS-tss-v1_0-3ffb9-simple/
+.idea/masterthesis-alaamiri.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+*.pyc 

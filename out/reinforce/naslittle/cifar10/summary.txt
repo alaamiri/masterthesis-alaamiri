@@ -1,0 +1,6 @@
+Best of best model:
+ |skip_connect~0|+|none~0|skip_connect~1|+|none~0|none~1|nor_conv_1x1~2|
+ acc best: 0.740
+ avg: 0.597
+ std: 0.082
+ avg_time: 0.358

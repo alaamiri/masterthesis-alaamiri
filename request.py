@@ -15,7 +15,7 @@ import plot
 import os
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 500
+NB_NET = 5
 EPOCHS = 12
 api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
