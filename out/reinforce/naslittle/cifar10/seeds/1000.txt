@@ -1,5 +1,5 @@
 Best model:
- |skip_connect~0|+|none~0|skip_connect~1|+|none~0|none~1|nor_conv_1x1~2|
+ |skip_connect~0|+|none~0|nor_conv_1x1~1|+|none~0|none~1|skip_connect~2|
  Acc valid: 0.740
- At iter: 3
- Time: 0.403
+ At iter: 0
+ Time: 0.160

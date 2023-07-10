@@ -1,5 +1,5 @@
 Best model:
- |nor_conv_1x1~0|+|none~0|none~1|+|avg_pool_3x3~0|nor_conv_3x3~1|none~2|
- Acc valid: 0.740
- At iter: 0
- Time: 0.208
+ |nor_conv_1x1~0|+|none~0|none~1|+|nor_conv_3x3~0|nor_conv_3x3~1|none~2|
+ Acc valid: 0.765
+ At iter: 3
+ Time: 0.143

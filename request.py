@@ -51,6 +51,8 @@ def read_model(model_path):
 
     return second_line
 
+def test_request():
+    pass
 
 def run_request(c, path, models_path, dataset, search_space, predictor, fn, seeds):
     if not os.path.exists(path):
@@ -126,7 +128,7 @@ def run(s_space, fn, dataset, predictor, benchmark):
     models_path = path+'/seeds'
 
     c = Controller(s_space=s_space,
-                   rnn_fn=fn,
+                   ao_fn=fn,
                    dataset=dataset,
                    benchmark=benchmark,
                    verbose=True)

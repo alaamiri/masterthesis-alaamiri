@@ -6,3 +6,4 @@
 .idea/vcs.xml
 .idea/inspectionProfiles/profiles_settings.xml
 *.pyc 
+.vscode/settings.json

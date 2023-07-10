@@ -10,10 +10,12 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 import torch.nn as nn
 
+import plot
 from plot import *
 
-from search_spaces import *
-from ao import *
+import rnn
+from . import search_spaces
+from . import ao
 from predictors import naswot
 
 from nats_bench import create
@@ -24,34 +26,43 @@ from nats_bench import create
 
 
 class Controller():
-    def __init__(self, s_space, dataset='cifar10', ao_fn='reinforce', benchmark=False, verbose=False):
+    def __init__(self, s_space, dataset='cifar10', rnn_fn='reinforce', benchmark=False, verbose=False):
         if verbose:
             print("Controller"                  
                   "\n   +--- Dataset: {:}"
                   "\n   +--- Search Space: {:}"
                   "\n   +--- Benchmark mode: {:}".format(dataset, s_space,benchmark))
-        self.search_space = ss_selector(s_space, dataset)
-        print(self.search_space)
+        self.search_space = search_spaces.ss_selector(s_space, dataset)
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
 
-        # Select the right algo optimizer and give it the right operations set
-        # of the used search space
-        self.ao_fn = ao_selector(ao_fn)(self.s_tag)
+        self.fn = rnn_fn
 
         self.dataset = dataset
         self.benchmark = benchmark
+        self.rnn_fn = rnn_fn
 
+        self.rnn = rnn.RNN(rnn.HIDDEN_SIZE, self.s_tag)
         self.loaders = self._get_dataloaders(batch_size=64)
 
         self.verbose = verbose
         
 
-    def generate_arch(self):
-        arch_l, prob_list = self.ao_fn.generate_arch(self.nb_ops)
+    def generate_arch(self, optimizer):
+        if optimizer=="reinforce":
+            arch_l, prob_list = self.rnn.generate_arch(self.nb_ops)
+        elif optimizer=="randomsearch":
+            arch_l, prob_list = self.generate_random_arch(self.nb_ops)
 
         return arch_l, prob_list
 
+    def generate_random_arch(self, nb_ops):
+        arch_l = []
+        for _ in range(nb_ops):
+            i = random.randint(0,len(self.s_tag)-1)
+            arch_l.append(self.s_tag[i])
+
+        return arch_l, 0
     def build_arch(self, arch_l):
         model = None
         if self.benchmark:
@@ -139,20 +150,22 @@ class Controller():
         return r
 
 
-    def update_ao_fn(self, r, prob_list):
-        loss = self.ao_fn.update(prob_list, r)
+    def update_rnn(self, r, prob_list):
+        loss = self.rnn.reinforce(prob_list, r)
 
         return loss
 
 
-    def iterate(self, predictor, epochs):
-        arch_l, prob_list = self.generate_arch()
+    def iterate(self, optimizer, predictor, epochs):
+        arch_l, prob_list = self.generate_arch(optimizer)
         model = self.build_arch(arch_l)
         r = self.evaluate_arch(model, predictor, epochs)
-        ao_loss = self.update_ao_fn(r, prob_list)
-    
-        return arch_l,model,r,ao_loss
+        if optimizer=="reinforce":
+            rnn_loss = self.update_rnn(r, prob_list)
+        else:
+            rnn_loss = False
 
+        return arch_l,model,r,rnn_loss
 
     def run(self, nb_iterations, predictor=None, seed=None, epochs=12, reset=False):
         if self.verbose:
@@ -164,7 +177,7 @@ class Controller():
                   "\n\t   +--- Reset hidden state: {:}".format(nb_iterations, predictor, seed, epochs, reset))
 
         if reset:
-            self.ao_fn.reset_param()
+            self.rnn.h = self.rnn.init_hidden()
 
         if seed is not None:
             torch.manual_seed(seed)
@@ -177,7 +190,7 @@ class Controller():
         start_time = time.time()
 
         for i in range(nb_iterations):
-            arch,model,r,ao_loss = self.iterate(predictor,epochs)
+            arch,model,r,rnn_loss = self.iterate(self.fn, predictor,epochs)
 
             self._add_dist_layer(arch)
 
