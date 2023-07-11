@@ -1,5 +1,0 @@
-Best model:
- |nor_conv_1x1~0|+|nor_conv_3x3~0|nor_conv_1x1~1|+|nor_conv_3x3~0|nor_conv_1x1~1|nor_conv_3x3~2|
- Acc valid: 0.757
- At iter: 3
- Time: 0.150

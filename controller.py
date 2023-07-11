@@ -31,7 +31,6 @@ class Controller():
                   "\n   +--- Search Space: {:}"
                   "\n   +--- Benchmark mode: {:}".format(dataset, s_space,benchmark))
         self.search_space = ss_selector(s_space, dataset)
-        print(self.search_space)
         self.s_tag = self.search_space.OPERATIONS
         self.nb_ops = self.search_space.NB_OPS
 
@@ -172,12 +171,16 @@ class Controller():
         l_models = []
         l_valid = []
         l_iter = []
+        l_time = []
 
         self.op_dist = self._init_dist_list()
-        start_time = time.time()
 
         for i in range(nb_iterations):
+            start_time = time.time()
             arch,model,r,ao_loss = self.iterate(predictor,epochs)
+            end_time = time.time()
+            
+            l_time.append(end_time-start_time)
 
             self._add_dist_layer(arch)
 
@@ -190,11 +193,10 @@ class Controller():
                     print(f"\t[{i:>5d}/{nb_iterations:>5d}]")
 
 
-        end_time = time.time()
-        delta_time = end_time - start_time
+        
 
         #return best_model, best_valid, best_iter, delta_time
-        return  l_models, l_valid, l_iter, delta_time
+        return  l_models, l_valid, l_iter, l_time
 
     def arch_to_str(self,operations):
         return self.search_space.get_nasbench_unique(operations)

@@ -1,5 +1,0 @@
-Best model:
- |skip_connect~0|+|skip_connect~0|skip_connect~1|+|skip_connect~0|none~1|none~2|
- Acc valid: 0.737
- At iter: 3
- Time: 0.183

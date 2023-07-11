@@ -1,5 +1,0 @@
-Best model:
- |none~0|+|nor_conv_3x3~0|nor_conv_3x3~1|+|skip_connect~0|none~1|nor_conv_3x3~2|
- Acc valid: 0.833
- At iter: 2
- Time: 0.180

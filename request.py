@@ -11,11 +11,12 @@
 from nats_bench import create
 from controller import Controller
 import numpy as np
+import pandas as pd
 import plot
 import os
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 5
+NB_NET = 200
 EPOCHS = 12
 api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
@@ -51,9 +52,25 @@ def read_model(model_path):
 
     return second_line
 
-def test_request():
-    pass
+def run_request(c, path, models_path,predictor,seeds):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
+    if not os.path.exists(models_path):
+        os.makedirs(models_path)
+    
+    for seed in seeds:
+        models, valids, iters, times = c.run(nb_iterations=NB_NET,
+                                                              predictor=predictor,
+                                                              seed=seed,
+                                                              epochs=EPOCHS,
+                                                              reset=True)
+        idx_models = [api.query_index_by_arch(c.arch_to_str(model)) for model in models]
+        df = pd.DataFrame({'id' : idx_models, 'acc_valid' : valids, 'time' : times})
+        csv_name = f"/{seed}.csv"
+        df.to_csv(models_path+csv_name, index=False)
+
+"""
 def run_request(c, path, models_path, dataset, search_space, predictor, fn, seeds):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -109,15 +126,16 @@ def run_request(c, path, models_path, dataset, search_space, predictor, fn, seed
     write_model(path, 'summary', sum_str)
     sum_dist = matrix_sum(l_dist) / len(l_dist)
     print(read_model(path+"/summary.txt"))
-    """plot.dist_heatmap(sum_dist,
-                      ['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
-                      path,
-                      dataset=dataset,
-                      nb_seeds=len(seeds),
-                      search_space=search_space,
-                      fn=fn)"""
+    #plot.dist_heatmap(sum_dist,
+                      #['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
+                      #path,
+                      #dataset=dataset,
+                      #nb_seeds=len(seeds),
+                      #search_space=search_space,
+                      #fn=fn)
 
     return all_models, all_valids
+"""
 # ======================================================================================================================
 def run(s_space, fn, dataset, predictor, benchmark):
     if predictor is None:
@@ -133,7 +151,7 @@ def run(s_space, fn, dataset, predictor, benchmark):
                    benchmark=benchmark,
                    verbose=True)
 
-    return run_request(c, path, models_path, dataset, s_space, predictor, fn, seeds)
+    return run_request(c, path, models_path, predictor, seeds)
 
 
 def get_info(models, type, dataset):
@@ -153,6 +171,7 @@ if __name__ == '__main__':
     reinforce_bench_c10 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #plot.box_plot([reinforce_bench_c10], ['nasbench'], OUT_DIR,
                   #"Distribution of severals space searchs with reinforce", fn='reinforce')
+                  
     #reinforce_nasbench_naswot(seeds, 'cifar10')
     #run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor='naswot', benchmark=False)
     #random_nasbench(seeds, 'cifar10')
