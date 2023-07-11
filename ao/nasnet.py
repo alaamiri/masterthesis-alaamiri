@@ -15,7 +15,8 @@ class NASNET(AbsAO):
 
         self.rnn = RNN(len(self.search_space), HIDDEN_SIZE, N_LAYER)
         
-        self.rnn_x = torch.zeros(len(ss)).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
+        self.input_size = len(ss)
+        self.rnn_x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
         self.rnn_h = self.rnn.init_hidden()
         
         self.prev_ema = -1
@@ -57,14 +58,18 @@ class NASNET(AbsAO):
 
         if reset_param:
             self.rnn_x = torch.zeros(self.input_size).unsqueeze(dim=0)  # lstm need dim 3 so we dim 2 then dim 3
-            self.rnn_h = self.init_hidden()
+            self.rnn_h = self.rnn.init_hidden()
         
         for _ in range(n_ops):
-            self.rnn_x, self.rnn_h, layer, prob = self.return_NNlayer(self.rnn_x, self.rnn_h)
+            self.rnn_x, self.rnn_h, layer, prob = self.return_op(self.rnn_x, self.rnn_h)
             nn_str.append(layer)
             prob_list.append(prob)
 
         return nn_str, torch.tensor(prob_list)
+    
+    
+    def ema(self, r, prev_ema):
+        return self.alpha * r + (1-self.alpha) * prev_ema
 
 
     def update(self, prob: list, reward: float) -> None :

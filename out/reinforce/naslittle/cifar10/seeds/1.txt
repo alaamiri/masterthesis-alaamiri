@@ -1,5 +1,5 @@
 Best model:
- |skip_connect~0|+|none~0|nor_conv_3x3~1|+|none~0|none~1|skip_connect~2|
- Acc valid: 0.766
- At iter: 0
- Time: 0.164
+ |avg_pool_3x3~0|+|none~0|nor_conv_1x1~1|+|none~0|none~1|skip_connect~2|
+ Acc valid: 0.517
+ At iter: 1
+ Time: 0.155

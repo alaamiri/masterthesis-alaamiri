@@ -10,18 +10,17 @@ NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 
 class NASLittle(AbsSS):
     def __init__(self, N, in_channels, cell_channels, dataset, num_classes = 10):
-        super(NASLittle, self).__init__()
+        super(NASLittle, self).__init__(["none",
+                                         "skip_connect",
+                                         "nor_conv_1x1",
+                                         "nor_conv_3x3",
+                                         "avg_pool_3x3"])
         self.N = N
         self.in_channels = in_channels
         self.channels = cell_channels
         self.num_classes = num_classes
         self.dataset = dataset
-        self.OPERATIONS = ["none",
-                           "skip_connect",
-                           "nor_conv_1x1",
-                           "nor_conv_3x3",
-                           "avg_pool_3x3"]
-
+       
         #Operations per cell
         self.NB_OPS = 3
         self.api = create(NATS_BENCH_TSS_PATH,
