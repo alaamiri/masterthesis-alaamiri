@@ -13,14 +13,35 @@ def get_path(s_space, fn, dataset, predictor, seed):
     
     return models_path
 
+
 def csv_to_df(df_path):
     return pd.read_csv(df_path)
 
 
+def get_df(s_space, fn, dataset, predictor, seed):
+    path = get_path(s_space, fn, dataset, predictor, seed)
+    
+    return csv_to_df(path)
+
+
+def get_col(df, col):
+    return df[col]
+
+
+def get_best(df, col):
+    best_acc = df[df[col] == df[col].max()]
+    
+    return best_acc
+
+
+def get_metrics(df, col):
+    return df[col].mean(), df[col].std()
+
 
 if __name__ == '__main__':
-    path = get_path('nasbench', 'reinforce', 'cifar10', None, '10')
-    df = csv_to_df(path)
-    
-    print(df)
+    df = get_df('nasbench', 'reinforce', 'cifar10', None, '10')
+    best_valid = get_best(df, 'acc_valid')
+    print(best_valid)
+    time_mean, time_std = get_metrics(df, 'time')
+    print(time_mean, time_std)
     
