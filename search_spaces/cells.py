@@ -78,7 +78,7 @@ class CellDAG(nn.Module):
 
 class CellSkipFCDAG(nn.Module):
     def __init__(self, C, operations):
-        super(CellDAG, self).__init__()
+        super(CellSkipFCDAG, self).__init__()
         self.set_model(C, operations)
         self.operations = operations
         # print(self.model)

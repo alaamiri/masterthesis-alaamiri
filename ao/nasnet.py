@@ -11,7 +11,7 @@ N_LAYER = 2
 
 class NASNET(AbsAO):
     def __init__(self, ss) -> None:
-        super(NASNET,self).__init__(ss)
+        super(NASNET, self).__init__(ss)
 
         self.rnn = RNN(len(self.search_space), HIDDEN_SIZE, N_LAYER)
         

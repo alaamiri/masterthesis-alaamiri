@@ -16,7 +16,7 @@ import plot
 import os
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 200
+NB_NET = 500
 EPOCHS = 12
 api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
@@ -162,12 +162,80 @@ def get_info(models, type, dataset):
 
     return stat
 
+
+def nasnet_nasbench(dataset):
+    ss = 'nasbench'
+    fn = 'reinforce'
+    run(s_space=ss, fn=fn, dataset=dataset, predictor=None, benchmark=True)
+
+
+def random_nasbench(dataset):
+    ss = 'nasbench'
+    fn = 'random'
+    run(s_space=ss, fn=fn, dataset=dataset, predictor=None, benchmark=True)
+
+
+def nasnet_otherbenchs(dataset):
+    fn = 'reinforce'
+    run(s_space='nasbig', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+    run(s_space='nasmedium', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+    run(s_space='naslittle', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+
+
+def random_otherbenchs(dataset):
+    fn = 'random'
+    run(s_space='nasbig', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+    run(s_space='nasmedium', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+    run(s_space='naslittle', fn=fn, dataset=dataset, predictor=None, benchmark=True)
+
+
+def nasnet_naswot_nasbench(dataset):
+    ss = 'nasbench'
+    fn = 'reinforce'
+    run(s_space=ss, fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+
+
+def random_naswot_nasbench(dataset):
+    ss = 'nasbench'
+    fn = 'random'
+    run(s_space=ss, fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+
+
+def nasnet_naswot_otherbenchs(dataset):
+    fn = 'reinforce'
+    run(s_space='nasbig', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+    run(s_space='nasmedium', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+    run(s_space='naslittle', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+
+
+def random_naswot_otherbenchs(dataset):
+    fn = 'random'
+    run(s_space='nasbig', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+    run(s_space='nasmedium', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+    run(s_space='naslittle', fn=fn, dataset=dataset, predictor='naswot', benchmark=False)
+
+
 if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
+    dataset = 'cifar10' #ImageNet16-120
+
+    ### NASNET --- NASBENCH
+    nasnet_nasbench(dataset)
+    random_nasbench(dataset)
+    ### NASNET --- OTHER BENCHS (NASBIG NASMEDIUM NASLITTLE)
+    #nasnet_otherbenchs(dataset)
+    #random_otherbenchs(dataset)
+    ### NASNET + NASWOT --- NASBENCH
+    #nasnet_naswot_nasbench(dataset)
+    #random_naswot_nasbench(dataset)
+    ### NASNET + NASWOT --- OTHERBENCH
+    #nasnet_naswot_otherbenchs(dataset)
+    #random_naswot_otherbenchs(dataset)
 
 
-    #reinforce_nasbench(seeds, 'cifar10')
+
+    """#reinforce_nasbench(seeds, 'cifar10')
     reinforce_bench_c10 = run(s_space='nasbench', fn='reinforce', dataset='cifar10', predictor=None, benchmark=True)
     #plot.box_plot([reinforce_bench_c10], ['nasbench'], OUT_DIR,
                   #"Distribution of severals space searchs with reinforce", fn='reinforce')
@@ -203,10 +271,10 @@ if __name__ == '__main__':
     #random_big_c10 = run(s_space='nasbig', fn='randomsearch', dataset='cifar10', predictor=None, benchmark=True)
 
     #{'flops', 'params''latency', 'T-train@epoch', 'T-train@total', 'T-ori-test@epoch', 'T-ori-test@total'}
-    params = "params"
-    p = [get_info(data[0], "params", "cifar10") for data in [reinforce_bench_c10, reinforce_big_c10, reinforce_medium_c10, reinforce_little_c10]]
-    plot.bar_plot(p, ["bench", "big", "medium", "little"], OUT_DIR, params, "reinforce", "cifar10")
-    """plot.box_plot([reinforce_bench_c10[1], reinforce_big_c10[1], reinforce_medium_c10[1], reinforce_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
+    #params = "params"
+    #p = [get_info(data[0], "params", "cifar10") for data in [reinforce_bench_c10, reinforce_big_c10, reinforce_medium_c10, reinforce_little_c10]]
+    #plot.bar_plot(p, ["bench", "big", "medium", "little"], OUT_DIR, params, "reinforce", "cifar10")
+    plot.box_plot([reinforce_bench_c10[1], reinforce_big_c10[1], reinforce_medium_c10[1], reinforce_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with reinforce", fn='reinforce')
     plot.box_plot([random_bench_c10[1], random_big_c10[1], random_medium_c10[1], random_little_c10[1]], ['nasbench', 'nasbig', 'nasmedium', 'naslittle'], OUT_DIR,
                   "Distribution of severals space searchs with random search", fn='randomsearch')"""

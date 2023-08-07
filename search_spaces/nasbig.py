@@ -79,7 +79,22 @@ class NASBig(AbsSS):
 
 
     def get_score_from_api(self, model):
-        info = self.api.get_more_info(model, self.dataset + "-valid")
+        # (5374, 89.16)
+        # print(self.api.find_best("cifar10", "ori-test"))
+        # (13714, 84.82)
+        # print(self.api.find_best("cifar10-valid", "ori-test"))
+        # (13714, 84.89199999023438)
+        # print(self.api.find_best("cifar10-valid", "x-valid"))
+        if self.dataset == 'cifar10':
+            info = self.api.get_more_info(model, self.dataset + '-valid')  # !!!
+        else:
+            info = self.api.get_more_info(model, self.dataset)
+        # print("not valid", info)
+        # m_info = self.api.get_net_config(model,self.dataset)
+        # print("kiki",self.api.get_cost_info(model, 'cifar10-valid', '12'))
+        # print("net config", m_info)
+        # info = self.api.get_more_info(model, self.dataset + "-valid")
+        # print("valid", info)
         r = info['valid-accuracy'] / 100
 
         return r
