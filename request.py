@@ -60,13 +60,14 @@ def run_request(c, path, models_path,predictor,seeds):
         os.makedirs(models_path)
     
     for seed in seeds:
-        models, valids, iters, times = c.run(nb_iterations=NB_NET,
-                                                              predictor=predictor,
-                                                              seed=seed,
-                                                              epochs=EPOCHS,
-                                                              reset=True)
+        models, valids, iters, times, l_t_time, l_flops, l_params, l_latency = c.run(nb_iterations=NB_NET,
+                                                                                     predictor=predictor,
+                                                                                     seed=seed,
+                                                                                     epochs=EPOCHS,
+                                                                                     reset=True)
         idx_models = [api.query_index_by_arch(c.arch_to_str(model)) for model in models]
-        df = pd.DataFrame({'id' : idx_models, 'acc_valid' : valids, 'time' : times})
+        df = pd.DataFrame({'id' : idx_models, 'acc_valid' : valids, 'time' : times, 'train': l_t_time,
+                           'flops' : l_flops, 'params' : l_params, 'latency' : l_latency})
         csv_name = f"/{seed}.csv"
         df.to_csv(models_path+csv_name, index=False)
 
@@ -222,16 +223,16 @@ if __name__ == '__main__':
 
     ### NASNET --- NASBENCH
     #nasnet_nasbench(dataset)
-    #random_nasbench(dataset)
+    random_nasbench(dataset)
     ### NASNET --- OTHER BENCHS (NASBIG NASMEDIUM NASLITTLE)
     #nasnet_otherbenchs(dataset)
     #random_otherbenchs(dataset)
     ### NASNET + NASWOT --- NASBENCH
-    nasnet_naswot_nasbench(dataset)
-    random_naswot_nasbench(dataset)
+    #nasnet_naswot_nasbench(dataset)
+    #random_naswot_nasbench(dataset)
     ### NASNET + NASWOT --- OTHERBENCH
-    nasnet_naswot_otherbenchs(dataset)
-    random_naswot_otherbenchs(dataset)
+    #nasnet_naswot_otherbenchs(dataset)
+    #random_naswot_otherbenchs(dataset)
 
 
 

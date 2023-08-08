@@ -125,7 +125,7 @@ class Controller():
 
     def validate_arch(self, model, epochs):
         if self.benchmark:
-            r = self.search_space.get_score_from_api(model)
+            r = self.search_space.get_score_from_api(model, epochs)
 
         else:
             for epoch in range(epochs):
@@ -173,6 +173,11 @@ class Controller():
         l_iter = []
         l_time = []
 
+        l_t_time = []
+        l_flops = []
+        l_params = []
+        l_latency = []
+
         self.op_dist = self._init_dist_list()
 
         for i in range(nb_iterations):
@@ -187,6 +192,12 @@ class Controller():
             l_models.append(arch)
             l_valid.append(r)
             l_iter.append(i)
+            info, cost_info = self.search_space.get_info(model, epochs)
+
+            l_t_time.append(info["train-all-time"])
+            l_flops.append(cost_info['flops'])
+            l_params.append(cost_info['params'])
+            l_latency.append(cost_info['latency'])
 
             if self.verbose:
                 if i % (nb_iterations//5) == 0:
@@ -196,7 +207,7 @@ class Controller():
         
 
         #return best_model, best_valid, best_iter, delta_time
-        return  l_models, l_valid, l_iter, l_time
+        return  l_models, l_valid, l_iter, l_time, l_t_time, l_flops, l_params, l_latency
 
     def arch_to_str(self,operations):
         return self.search_space.get_nasbench_unique(operations)
