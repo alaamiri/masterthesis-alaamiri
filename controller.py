@@ -188,13 +188,19 @@ class Controller():
             end_time = time.time()
             
             l_time.append(end_time-start_time)
-
             self._add_dist_layer(arch)
 
             l_models.append(arch)
-            l_valid.append(r)
+            if predictor is None:
+                info, cost_info = self.search_space.get_info(model, epochs)
+                l_valid.append(r)
+            else:
+                info, cost_info = self.search_space.get_info(self.search_space.api.query_index_by_arch(
+                    self.arch_to_str(arch)), epochs)
+                l_valid.append(info['valid-accuracy'])
+
             l_iter.append(i)
-            info, cost_info = self.search_space.get_info(model, epochs)
+
 
             l_t_time.append(info["train-all-time"])
             l_flops.append(cost_info['flops'])

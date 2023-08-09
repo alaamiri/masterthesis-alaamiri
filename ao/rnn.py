@@ -20,7 +20,7 @@ class RNN(nn.Module):
         self.lstm = nn.LSTM(self.input_size, hidden_size, num_layers= n_layers)
         self.hidden_to_hyper = nn.Linear(hidden_size, self.output_size)
 
-        self.optimizer = optim.Adam(self.lstm.parameters(), lr=1e-2)
+        self.optimizer = optim.Adam(self.lstm.parameters(), lr=1e-3)
         #self.optimizer = optim.Adam(self.parameters(), lr=6e-4)
 
         
@@ -28,7 +28,7 @@ class RNN(nn.Module):
         x = torch.unsqueeze(x,0)
 
         x_lstm, h = self.lstm(x, h)
-        x = self.hidden_to_hyper(x_lstm.view(len(x_lstm),-1))
+        x = self.hidden_to_hyper(x_lstm.view(len(x_lstm), -1))
 
         return x,h
     

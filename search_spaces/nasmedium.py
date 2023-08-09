@@ -14,7 +14,7 @@ class NASMedium(AbsSS):
                                          "skip_connect",
                                          "nor_conv_1x1",
                                          "nor_conv_3x3",
-                                         "avg_pool_3x3"])
+                                         "avg_pool_3x3"], dataset)
         self.N = N
         self.in_channels = in_channels
         self.channels = cell_channels
@@ -23,10 +23,6 @@ class NASMedium(AbsSS):
 
         #Operations per cell
         self.NB_OPS = 3
-        self.api = create(NATS_BENCH_TSS_PATH,
-                          'tss',
-                          fast_mode=True,
-                          verbose=False)
 
     def get_model(self, operations):
         model = nn.Sequential(OrderedDict([

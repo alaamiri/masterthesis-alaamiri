@@ -16,8 +16,8 @@ import plot
 import os
 NATS_BENCH_TSS_PATH = "nats_bench_data/NATS-tss-v1_0-3ffb9-simple"
 OUT_DIR = "./out/"
-NB_NET = 20
-EPOCHS = 12
+NB_NET = 200
+EPOCHS = 200
 api = create(NATS_BENCH_TSS_PATH, 'tss', fast_mode=True, verbose=False)
 
 def matrix_sum(matrix_list):
@@ -153,21 +153,20 @@ def random_naswot_otherbenchs(dataset):
 if __name__ == '__main__':
     # [14139, 655, 4237, 4361, 699]
     seeds = [1, 10, 100, 1000, 10000]
-    dataset = 'cifar100' #ImageNet16-120
+    dataset = 'ImageNet16-120' #ImageNet16-120
 
     ### NASNET --- NASBENCH
     nasnet_nasbench(dataset)
-
-    #random_nasbench(dataset)
+    random_nasbench(dataset)
     ### NASNET --- OTHER BENCHS (NASBIG NASMEDIUM NASLITTLE)
-    #nasnet_otherbenchs(dataset)
-    #random_otherbenchs(dataset)
+    nasnet_otherbenchs(dataset)
+    random_otherbenchs(dataset)
     ### NASNET + NASWOT --- NASBENCH
-    #nasnet_naswot_nasbench(dataset)
-    #random_naswot_nasbench(dataset)
+    nasnet_naswot_nasbench(dataset)
+    random_naswot_nasbench(dataset)
     ### NASNET + NASWOT --- OTHERBENCH
-    #nasnet_naswot_otherbenchs(dataset)
-    #random_naswot_otherbenchs(dataset)
+    nasnet_naswot_otherbenchs(dataset)
+    random_naswot_otherbenchs(dataset)
 
 
 
