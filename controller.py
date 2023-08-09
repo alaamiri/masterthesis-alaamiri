@@ -167,6 +167,8 @@ class Controller():
 
         if seed is not None:
             torch.manual_seed(seed)
+            np.random.seed(seed)
+            random.seed(seed)
 
         l_models = []
         l_valid = []

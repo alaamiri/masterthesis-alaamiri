@@ -71,72 +71,6 @@ def run_request(c, path, models_path,predictor,seeds):
         csv_name = f"/{seed}.csv"
         df.to_csv(models_path+csv_name, index=False)
 
-"""
-def run_request(c, path, models_path, dataset, search_space, predictor, fn, seeds):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    if not os.path.exists(models_path):
-        os.makedirs(models_path)
-
-    l_model = []
-    l_valid = []
-    l_dist = []
-    l_time = []
-
-    all_models = []
-    all_valids = []
-
-    for seed in seeds:
-        models, valids, iters, delta_time = c.run(nb_iterations=NB_NET,
-                                                              predictor=predictor,
-                                                              seed=None,
-                                                              epochs=EPOCHS,
-                                                              reset=True)
-        best_id = valids.index(max(valids))
-        best_model, best_valid, best_iter = models[best_id], valids[best_id], iters[best_id]
-
-        all_valids.append(valids)
-        all_models.append([api.query_index_by_arch(c.arch_to_str(model)) for model in models])
-
-        l_model.append(best_model)
-        l_valid.append(best_valid)
-        l_dist.append(c.op_dist)
-        l_time.append(delta_time)
-        best_str = "Best model:\n " \
-                   "{:}" \
-                   "\n Acc valid: {:>.3f}" \
-                   "\n At iter: {:}" \
-                   "\n Time: {:>.3f}".format(c.arch_to_str(best_model), best_valid, best_iter, delta_time)
-
-        write_model(models_path, seed, best_str)
-        print(best_str)
-
-    avg_valid, std_valid, avg_time = np.average(l_valid), np.std(l_valid), np.average(l_time)
-    best_valid = max(l_valid)
-    best_of_best = l_model[l_valid.index(best_valid)]
-    print("***************** Sum *****************")
-    sum_str = "Best of best model:\n" \
-              " {:}\n" \
-              " acc best: {:>.3f}\n" \
-              " avg: {:>.3f}\n" \
-              " std: {:>.3f}\n" \
-              " avg_time: {:>.3f}".format(c.arch_to_str(best_of_best),best_valid, avg_valid, std_valid, avg_time)
-    print(sum_str)
-    print("***************************************")
-    write_model(path, 'summary', sum_str)
-    sum_dist = matrix_sum(l_dist) / len(l_dist)
-    print(read_model(path+"/summary.txt"))
-    #plot.dist_heatmap(sum_dist,
-                      #['zero', 'identity', 'conv1x1', 'conv3x3', 'avgp3x3'],
-                      #path,
-                      #dataset=dataset,
-                      #nb_seeds=len(seeds),
-                      #search_space=search_space,
-                      #fn=fn)
-
-    return all_models, all_valids
-"""
 # ======================================================================================================================
 def run(s_space, fn, dataset, predictor, benchmark):
     if predictor is None:
@@ -222,8 +156,9 @@ if __name__ == '__main__':
     dataset = 'cifar100' #ImageNet16-120
 
     ### NASNET --- NASBENCH
-    #nasnet_nasbench(dataset)
-    random_nasbench(dataset)
+    nasnet_nasbench(dataset)
+
+    #random_nasbench(dataset)
     ### NASNET --- OTHER BENCHS (NASBIG NASMEDIUM NASLITTLE)
     #nasnet_otherbenchs(dataset)
     #random_otherbenchs(dataset)
