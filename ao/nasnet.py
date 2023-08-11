@@ -20,7 +20,7 @@ class NASNET(AbsAO):
         self.rnn_h = self.rnn.init_hidden()
         
         self.prev_ema = -1
-        self.alpha = 0.85
+        self.alpha = 0.65
     
     
     def return_op(self, x, h):

@@ -70,16 +70,15 @@ def generate_df_metrics(ss, fn, dataset, predictor=None):
     #mean of access time
     nasnet_l.append(f"{get_metrics(nasnet_df, 'time')[0]:.4f}")
 
-    t_time = np.array(get_metrics(nasnet_df, 'train'))
-    avg_time, std_time = np.mean(t_time), np.std(t_time)
+    t_time = get_col(nasnet_df, 'train')
+    avg_time, std_time = t_time.mean(), t_time.std()
     nasnet_l.append(f"{avg_time:.2f}+-{std_time:.2f}")
 
-    t_time = np.array(get_metrics(nasnet_5, 'train'))
-    avg_time, std_time = np.mean(t_time), np.std(t_time)
+    t_time = get_col(nasnet_5, 'train')
+    print(t_time)
+    avg_time, std_time = t_time.mean(), t_time.std()
     nasnet_l.append(f"{avg_time:.2f}+-{std_time:.2f}")
 
-    print(nasnet_df)
-    print(nasnet_l)
 
     return nasnet_l
 
@@ -111,14 +110,16 @@ def generate_df_cost(ss, fn, dataset, predictor=None):
     nasnet_l.append(get_str_metric(get_metrics(nasnet_5, 'params')))
     nasnet_l.append(f"{nasnet_1['params'].tolist()[0]:.2f}")
 
-    latency = np.array(get_metrics(nasnet_df, 'latency'))
+    """latency = np.array(get_metrics(nasnet_df, 'latency'))
     avg_latency, std_latency = np.mean(latency), np.std(latency)
-    nasnet_l.append(f"{avg_latency:.4f}+-{std_latency:.4f}")
+    nasnet_l.append(f"{avg_latency:.4f}+-{std_latency:.4f}")"""
 
-    print(nasnet_df)
-    print(nasnet_l)
+    latency = get_col(nasnet_df, 'latency')
+    avg_time, std_time = latency.mean(), latency.std()
+    nasnet_l.append(f"{avg_time:.4f}+-{std_time:.4f}")
 
     return nasnet_l
+
 
 def generate_cost_table(columns, col_name):
     dict = {}
@@ -132,17 +133,34 @@ def generate_cost_table(columns, col_name):
     print(df)
 
 
-
 if __name__ == '__main__':
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+
     df = get_df('nasbench', 'reinforce', 'cifar10', None, '10')
     best_valid = get_best(df, 'acc_valid')
     print(best_valid)
     val = get_metrics(df, 'acc_valid')
     print(val)
-    #nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'ImageNet16-120') #ImageNet16-120
-    #random_nasbench = generate_df_metrics('nasbench', 'random', 'ImageNet16-120')
-    #generate_acc_table([nasnet_nasbench, random_nasbench], ["NASNET", "Random Search"])
 
-    nasnet_nasbench = generate_df_cost('nasbench', 'reinforce', 'ImageNet16-120') #ImageNet16-120
-    random_nasbench = generate_df_cost('nasbench', 'random', 'ImageNet16-120')
+    nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'cifar10') #ImageNet16-120
+    random_nasbench = generate_df_metrics('nasbench', 'random', 'cifar10')
+    generate_acc_table([nasnet_nasbench, random_nasbench], ["NASNET", "Random Search"])
+
+    nasnet_nasbench = generate_df_cost('nasbench', 'reinforce', 'cifar10') #ImageNet16-120
+    random_nasbench = generate_df_cost('nasbench', 'random', 'cifar10')
     generate_cost_table([nasnet_nasbench, random_nasbench], ["NASNET", "Random Search"])
+
+    """nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'ImageNet16-120', 'naswot')
+    nasnet_nasbig = generate_df_metrics('nasbig', 'reinforce', 'ImageNet16-120', 'naswot')  # ImageNet16-120
+    nasnet_nasmedium = generate_df_metrics('nasmedium', 'reinforce', 'ImageNet16-120', 'naswot')
+    nasnet_naslittle = generate_df_metrics('naslittle', 'reinforce', 'ImageNet16-120', 'naswot')
+    generate_acc_table([nasnet_nasbench, nasnet_nasbig, nasnet_nasmedium, nasnet_naslittle],
+                       ["NAS-bench", "NAS-big", "NAS-medium", "NAS-little"])
+
+    nasnet_nasbench = generate_df_cost('nasbench', 'reinforce', 'ImageNet16-120', 'naswot')
+    nasnet_nasbig = generate_df_cost('nasbig', 'reinforce', 'ImageNet16-120', 'naswot')  # ImageNet16-120
+    nasnet_nasmedium = generate_df_cost('nasmedium', 'reinforce', 'ImageNet16-120', 'naswot')
+    nasnet_naslittle = generate_df_cost('naslittle', 'reinforce', 'ImageNet16-120', 'naswot')
+    generate_cost_table([nasnet_nasbench, nasnet_nasbig, nasnet_nasmedium, nasnet_naslittle],
+                       ["NAS-bench", "NAS-big", "NAS-medium", "NAS-little"])"""
