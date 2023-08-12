@@ -75,7 +75,6 @@ def generate_df_metrics(ss, fn, dataset, predictor=None):
     nasnet_l.append(f"{avg_time:.2f}+-{std_time:.2f}")
 
     t_time = get_col(nasnet_5, 'train')
-    print(t_time)
     avg_time, std_time = t_time.mean(), t_time.std()
     nasnet_l.append(f"{avg_time:.2f}+-{std_time:.2f}")
 
@@ -132,6 +131,54 @@ def generate_cost_table(columns, col_name):
     df = pd.DataFrame(dict, index=rows_name)
     print(df)
 
+def get_5_best(ss, fn, dataset, predictor=None, col = 'acc_valid'):
+
+    dfs = [get_df(ss, fn, dataset, predictor, seed).sort_values(by=col, ascending=False) for seed in seeds]
+
+    concatenated_first_rows = pd.concat([df.iloc[:1] for df in dfs])
+
+    if predictor is not None:
+        concatenated_first_rows['acc_valid'] = concatenated_first_rows['acc_valid'] / 100
+
+    return concatenated_first_rows
+
+def get_all_metrics(df):
+    l = []
+    """valid = get_str_metric_acc(get_metrics(df,'acc_valid'))
+    train = get_str_metric(get_metrics(df,'train'))
+    eval = f"{get_metrics(df,'time')[0]:.4f}+-{get_metrics(df,'time')[1]:.4f}"
+    flops = get_str_metric(get_metrics(df,'flops'))
+    params = get_str_metric(get_metrics(df,'params'))
+    lat = f"{get_metrics(df,'latency')[0]:.4f}+-{get_metrics(df,'latency')[1]:.4f}"
+"""
+    """valid = get_metrics(df, 'acc_valid')[0]
+    train = get_metrics(df, 'train')[0]
+    eval = get_metrics(df, 'time')[0]
+    flops = get_metrics(df, 'flops')[0]
+    params = get_metrics(df, 'params')[0]
+    lat = get_metrics(df, 'latency')[0]"""
+
+    valid = get_only_mean(df, 'acc_valid')
+    train = get_only_mean(df, 'train')
+    eval = f"{get_metrics(df, 'time')[0]:.4f}"
+    flops = get_only_mean(df, 'flops')
+    params = get_only_mean(df, 'params')
+    lat = f"{get_metrics(df, 'latency')[0]:.4f}"
+
+    l.append(valid)
+    l.append(train)
+    l.append(eval)
+    l.append(flops)
+    l.append(params)
+    l.append(lat)
+    l = [str(elem) for elem in l]
+    print('&','&'.join(l))
+
+def get_only_mean(df, col):
+    if col =="acc_valid":
+        return f"{df[col].mean()*100:.2f}"
+    else:
+        return f"{df[col].mean():.2f}"
 
 if __name__ == '__main__':
     pd.set_option('display.max_rows', None)
@@ -143,14 +190,16 @@ if __name__ == '__main__':
     val = get_metrics(df, 'acc_valid')
     print(val)
 
-    nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'cifar10') #ImageNet16-120
-    random_nasbench = generate_df_metrics('nasbench', 'random', 'cifar10')
-    generate_acc_table([nasnet_nasbench, random_nasbench], ["NASNET", "Random Search"])
+    """nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'ImageNet16-120') #ImageNet16-120
+    nasnet_naswot = generate_df_metrics('nasbench', 'reinforce', 'ImageNet16-120', 'naswot')
+    random_nasbench = generate_df_metrics('nasbench', 'random', 'ImageNet16-120')
+    generate_acc_table([nasnet_nasbench, nasnet_naswot, random_nasbench], ["NASNET", "NASNET+NASWOT", "Random Search"])
 
-    nasnet_nasbench = generate_df_cost('nasbench', 'reinforce', 'cifar10') #ImageNet16-120
-    random_nasbench = generate_df_cost('nasbench', 'random', 'cifar10')
-    generate_cost_table([nasnet_nasbench, random_nasbench], ["NASNET", "Random Search"])
-
+    nasnet_nasbench = generate_df_cost('nasbench', 'reinforce', 'ImageNet16-120') #ImageNet16-120
+    nasnet_naswot = generate_df_cost('nasbench', 'reinforce', 'ImageNet16-120', 'naswot')
+    random_nasbench = generate_df_cost('nasbench', 'random', 'ImageNet16-120')
+    generate_cost_table([nasnet_nasbench, nasnet_naswot, random_nasbench], ["NASNET","NASNET+NASWOT", "Random Search"])
+"""
     """nasnet_nasbench = generate_df_metrics('nasbench', 'reinforce', 'ImageNet16-120', 'naswot')
     nasnet_nasbig = generate_df_metrics('nasbig', 'reinforce', 'ImageNet16-120', 'naswot')  # ImageNet16-120
     nasnet_nasmedium = generate_df_metrics('nasmedium', 'reinforce', 'ImageNet16-120', 'naswot')
@@ -164,3 +213,10 @@ if __name__ == '__main__':
     nasnet_naslittle = generate_df_cost('naslittle', 'reinforce', 'ImageNet16-120', 'naswot')
     generate_cost_table([nasnet_nasbench, nasnet_nasbig, nasnet_nasmedium, nasnet_naslittle],
                        ["NAS-bench", "NAS-big", "NAS-medium", "NAS-little"])"""
+
+    df = get_5_best('naslittle','random','cifar10') # ImageNet16-120
+    get_all_metrics(df)
+    df = get_5_best('naslittle', 'random', 'cifar100')  # ImageNet16-120
+    get_all_metrics(df)
+    df = get_5_best('naslittle','random','ImageNet16-120') # ImageNet16-120
+    get_all_metrics(df)

@@ -163,10 +163,10 @@ if __name__ == '__main__':
     random_otherbenchs(dataset)
     ### NASNET + NASWOT --- NASBENCH
     nasnet_naswot_nasbench(dataset)
-    random_naswot_nasbench(dataset)
+    #random_naswot_nasbench(dataset)
     ### NASNET + NASWOT --- OTHERBENCH
     nasnet_naswot_otherbenchs(dataset)
-    random_naswot_otherbenchs(dataset)
+    #random_naswot_otherbenchs(dataset)
 
 
 
